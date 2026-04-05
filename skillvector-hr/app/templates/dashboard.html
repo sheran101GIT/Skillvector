@@ -1,0 +1,713 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dash-header-row">
+        <div>
+            <h1>HR Dashboard</h1>
+            <p class="subtitle">Comprehensive overview of recruitment metrics and candidate analytics</p>
+            <div class="tabs">
+                <button class="tab active" onclick="openTab(event, 'overview-tab')">Overview</button>
+                <button class="tab" onclick="openTab(event, 'journey-tab')">Candidate Journey</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERVIEW TAB -->
+    <div id="overview-tab" class="tab-content" style="display: block;">
+
+        <!-- Metrics Row 1 -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span>Total Candidate Applications</span>
+                    <i class="fas fa-users icon-blue"></i>
+                </div>
+                <div class="metric-value">{{ total_candidates }}</div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill blue" style="width: 45%"></div>
+                </div>
+                <div class="metric-sub">5 currently active</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span>Reviews Sent</span>
+                    <i class="fas fa-envelope icon-purple"></i>
+                </div>
+                <div class="metric-value">0</div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill purple" style="width: 0%"></div>
+                </div>
+                <div class="metric-sub">Pending reviews</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span>Total Candidates Selected</span>
+                    <i class="fas fa-check-circle icon-green"></i>
+                </div>
+                <div class="metric-value">{{ metrics.total_selected }}</div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill green" style="width: {{ metrics.success_rate }}%"></div>
+                </div>
+                <div class="metric-sub">Offers extended & joined</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span>Success Rate</span>
+                    <i class="fas fa-chart-line icon-orange"></i>
+                </div>
+                <div class="metric-value">{{ metrics.success_rate }}%</div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill orange" style="width: 0%"></div>
+                </div>
+                <div class="metric-sub">Conversion to offer/joined</div>
+            </div>
+        </div>
+
+        <!-- Metrics Row 2 -->
+        <div class="metrics-grid" style="margin-top: 1rem;">
+            <div class="metric-card small-card">
+                <div class="metric-header-simple">
+                    <i class="fas fa-search icon-grey"></i>
+                    <span>In Screening</span>
+                </div>
+                <div class="metric-value-small">{{ metrics.screening }} <span class="unit">candidates</span></div>
+            </div>
+
+            <div class="metric-card small-card">
+                <div class="metric-header-simple">
+                    <i class="fas fa-calendar icon-grey"></i>
+                    <span>Interviews Scheduled</span>
+                </div>
+                <div class="metric-value-small">{{ metrics.interview_scheduled }} <span class="unit">upcoming</span>
+                </div>
+            </div>
+
+            <div class="metric-card small-card">
+                <div class="metric-header-simple">
+                    <i class="fas fa-briefcase icon-grey"></i>
+                    <span>Active Job Positions</span>
+                </div>
+                <div class="metric-value-small">{{ jobs|length }} <span class="unit">open positions</span></div>
+            </div>
+        </div>
+
+        <!-- Top Candidates Section -->
+        <div class="section-container" style="margin-top: 2rem;">
+            <div class="section-header">
+                <div>
+                    <h2>Top Candidates by Job Role</h2>
+                    <p class="section-subtitle">Highest scoring candidates for each position based on AI analysis</p>
+                </div>
+            </div>
+
+            {% for job in jobs %}
+            <div class="role-section">
+                <div class="role-header">
+                    <h3>{{ job.title }}</h3>
+                    <span class="applicant-count">{{ job.candidates|length }} total applicants</span>
+                    <span class="top-tag">3 top performers</span>
+                </div>
+
+                <div class="candidate-row">
+                    {% for candidate in job.candidates[:3] %}
+                    <!-- Show top 3 candidates (assuming sorted, if not we'd sort in backend) -->
+                    <div class="candidate-summary-card">
+                        <div class="cand-info">
+                            <div class="cand-avatar">{{ candidate.name[:2].upper() }}</div>
+                            <div>
+                                <div class="cand-name">{{ candidate.name }}</div>
+                                <div class="cand-email">{{ candidate.email }}</div>
+                            </div>
+                            <div class="rank-badge">#{{ loop.index }}</div>
+                        </div>
+
+                        <div class="cand-score-row">
+                            <div class="score-block">
+                                <span class="label">Score</span>
+                                <span class="val">{{ "%.1f"|format(candidate.analysis.final_score * 10) if
+                                    candidate.analysis else 0 }}/10</span>
+                            </div>
+                            <div class="status-pill status-screening">{{ candidate.processing_status }}</div>
+                        </div>
+                        <div class="progress-bar-bg thin">
+                            {% set score_percent = (candidate.analysis.final_score * 100) if candidate.analysis else 0
+                            %}
+                            <div class="progress-bar-fill blue" style="width: {{ score_percent }}%">
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="no-data">No candidates yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <p>No jobs found.</p>
+            {% endfor %}
+        </div>
+
+    </div>
+
+    <!-- CANDIDATE JOURNEY TAB -->
+    <div id="journey-tab" class="tab-content" style="display: none;">
+        <div class="section-header">
+            <div>
+                <h2>Candidate Journey Tracking</h2>
+                <p class="section-subtitle">Track candidates from application to joining across all stages</p>
+            </div>
+            <button class="btn btn-outline"><i class="fas fa-file-export"></i> Export to Excel</button>
+        </div>
+
+        <div class="journey-grid">
+            <!-- 1. Applied -->
+            <div class="journey-card clickable" onclick="showStageCandidates('all', 'Applied')">
+                <div class="card-top">
+                    <i class="fas fa-file-alt icon-grey"></i>
+                    <span class="dot dot-blue"></span>
+                </div>
+                <div class="card-value">{{ total_candidates }}</div>
+                <div class="card-label">Applied</div>
+            </div>
+
+            <!-- 2. Aptitude -->
+            <div class="journey-card clickable" onclick="showStageCandidates('Aptitude', 'Aptitude')">
+                <div class="card-top">
+                    <i class="fas fa-brain icon-grey"></i>
+                    <span class="dot dot-purple"></span>
+                </div>
+                <div class="card-value">{{ metrics.aptitude }}</div>
+                <div class="card-label">Aptitude</div>
+            </div>
+
+            <!-- 3. Screening -->
+            <div class="journey-card clickable" onclick="showStageCandidates('Screening', 'Screening')">
+                <div class="card-top">
+                    <i class="fas fa-user-check icon-grey"></i>
+                    <span class="dot dot-purple"></span>
+                </div>
+                <div class="card-value">{{ metrics.screening }}</div>
+                <div class="card-label">Screening</div>
+            </div>
+
+            <!-- 4. Group Discussion -->
+            <div class="journey-card clickable" onclick="showStageCandidates('Group Discussion', 'Group Discussion')">
+                <div class="card-top">
+                    <i class="fas fa-users icon-grey"></i>
+                    <span class="dot dot-yellow"></span>
+                </div>
+                <div class="card-value">{{ metrics.group_discussion }}</div>
+                <div class="card-label">Group Discussion</div>
+            </div>
+
+            <!-- 5. Technical Round -->
+            <div class="journey-card clickable" onclick="showStageCandidates('Technical Round', 'Technical Round')">
+                <div class="card-top">
+                    <i class="fas fa-code icon-grey"></i>
+                    <span class="dot dot-yellow"></span>
+                </div>
+                <div class="card-value">{{ metrics.technical_round }}</div>
+                <div class="card-label">Technical Round</div>
+            </div>
+
+            <!-- 6. HR Round -->
+            <div class="journey-card clickable" onclick="showStageCandidates('HR Round', 'HR Round')">
+                <div class="card-top">
+                    <i class="fas fa-handshake icon-grey"></i>
+                    <span class="dot dot-yellow"></span>
+                </div>
+                <div class="card-value">{{ metrics.hr_round }}</div>
+                <div class="card-label">HR Round</div>
+            </div>
+
+            <!-- 7. Interview Scheduled -->
+            <div class="journey-card clickable"
+                onclick="showStageCandidates('Interview Scheduled', 'Interview Scheduled')">
+                <div class="card-top">
+                    <i class="fas fa-calendar-alt icon-grey"></i>
+                    <span class="dot dot-orange"></span>
+                </div>
+                <div class="card-value">{{ metrics.interview_scheduled }}</div>
+                <div class="card-label">Interview Scheduled</div>
+            </div>
+
+            <!-- 8. Interview Completed -->
+            <div class="journey-card clickable"
+                onclick="showStageCandidates('Interview Completed', 'Interview Completed')">
+                <div class="card-top">
+                    <i class="fas fa-check-circle icon-grey"></i>
+                    <span class="dot dot-orange"></span>
+                </div>
+                <div class="card-value">{{ metrics.interview_completed }}</div>
+                <div class="card-label">Interview Completed</div>
+            </div>
+
+            <!-- 9. Selected -->
+            <div class="journey-card clickable" onclick="showStageCandidates('Selected', 'Selected')">
+                <div class="card-top">
+                    <i class="fas fa-star icon-grey"></i>
+                    <span class="dot dot-green"></span>
+                </div>
+                <div class="card-value">{{ metrics.selected }}</div>
+                <div class="card-label">Selected</div>
+            </div>
+
+            <!-- 10. Offer Extended -->
+            <div class="journey-card clickable" onclick="showStageCandidates('Offer Extended', 'Offer Extended')">
+                <div class="card-top">
+                    <i class="fas fa-envelope-open-text icon-grey"></i>
+                    <span class="dot dot-green"></span>
+                </div>
+                <div class="card-value">{{ metrics.offer_extended }}</div>
+                <div class="card-label">Offer Extended</div>
+            </div>
+
+            <!-- 11. Joined -->
+            <div class="journey-card clickable" onclick="showStageCandidates('Joined', 'Joined')">
+                <div class="card-top">
+                    <i class="fas fa-suitcase icon-grey"></i>
+                    <span class="dot dot-teal"></span>
+                </div>
+                <div class="card-value">{{ metrics.joined }}</div>
+                <div class="card-label">Joined</div>
+            </div>
+
+            <!-- 12. Rejected -->
+            <div class="journey-card clickable" onclick="showStageCandidates('Rejected', 'Rejected')">
+                <div class="card-top">
+                    <i class="fas fa-user-times icon-grey"></i>
+                    <span class="dot dot-red"></span>
+                </div>
+                <div class="card-value">{{ metrics.rejected }}</div>
+                <div class="card-label">Rejected</div>
+            </div>
+        </div>
+
+        <!-- Candidate Journey List -->
+        <div class="journey-candidates-section">
+            <h3 class="journey-list-title">Candidate Pipeline</h3>
+            <div class="journey-candidates-list">
+                {% for job in jobs %}
+                {% for candidate in job.candidates %}
+                <div class="journey-candidate-row">
+                    <div class="journey-cand-info">
+                        <div class="journey-cand-avatar">{{ candidate.name[:2].upper() }}</div>
+                        <div class="journey-cand-details">
+                            <div class="journey-cand-name">{{ candidate.name }}</div>
+                            <div class="journey-cand-meta">
+                                <span><i class="far fa-calendar"></i> Applied: {{
+                                    candidate.created_at.strftime('%Y-%m-%d') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="journey-cand-stage">
+                        <span class="journey-stage-icon"><i class="fas fa-info-circle"></i></span>
+                        <span class="journey-next-action">Next: {{ candidate.current_stage|default('Conduct Screening',
+                            true) }}</span>
+                    </div>
+                    <div class="journey-cand-actions">
+                        <button class="btn-journey-action" onclick="openJourneyModal({{ candidate.id }})">View
+                            Journey</button>
+                        <button class="btn-journey-action btn-journey-primary" data-id="{{ candidate.id }}"
+                            data-name="{{ candidate.name }}" data-stage="{{ candidate.current_stage }}"
+                            onclick="openMoveStageModalFromButton(this)">Move Stage</button>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="journey-empty-state">
+                    <i class="fas fa-users"></i>
+                    <p>No candidates in the pipeline yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Move Stage Modal -->
+<div id="moveStageModal" class="modal-backdrop">
+    <div class="modal-content-large review-modal" style="max-width: 500px;">
+        <div class="modal-header">
+            <div>
+                <h2 id="moveStageTitle">Move Candidate Stage</h2>
+                <p class="modal-subtitle">Update candidate's progress in the hiring pipeline</p>
+            </div>
+            <button class="close-btn" onclick="closeMoveStageModal()"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="review-info-row">
+            <div class="review-info-item">
+                <span class="info-label">Candidate</span>
+                <span class="info-value" id="moveStageCandidateName">...</span>
+            </div>
+            <div class="review-info-item">
+                <span class="info-label">Current Stage</span>
+                <span class="info-value" id="moveStageCurrent">...</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+            <label class="info-label" style="display:block; margin-bottom: 0.5rem;">New Stage</label>
+            <select id="newStageSelect" class="form-select"
+                style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid #ddd;">
+                <optgroup label="Initial Stages">
+                    <option value="Aptitude">Aptitude</option>
+                    <option value="Screening">Screening</option>
+                </optgroup>
+                <optgroup label="Interview Process">
+                    <option value="Group Discussion">Group Discussion</option>
+                    <option value="Technical Round">Technical Round</option>
+                    <option value="HR Round">HR Round</option>
+                    <option value="Interview Scheduled">Interview Scheduled</option>
+                    <option value="Interview Completed">Interview Completed</option>
+                </optgroup>
+                <optgroup label="Decision">
+                    <option value="Selected">Selected</option>
+                    <option value="Offer Extended">Offer Extended</option>
+                    <option value="Rejected">Rejected</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+            <label class="info-label" style="display:block; margin-bottom: 0.5rem;">Notes (Optional)</label>
+            <textarea id="stageNotes" rows="4"
+                style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid #ddd; font-family: inherit;"
+                placeholder="Add details about this stage change..."></textarea>
+        </div>
+
+        <div style="margin-top: 2rem; text-align: right;">
+            <button class="btn btn-disabled" onclick="closeMoveStageModal()"
+                style="margin-right: 0.5rem;">Cancel</button>
+            <button class="btn btn-dark-action" onclick="submitMoveStage()">Confirm Move</button>
+        </div>
+    </div>
+</div>
+
+<!-- Candidate Journey Modal -->
+<div id="candidateJourneyModal" class="modal-backdrop">
+    <div class="modal-content-large journey-modal">
+        <div class="modal-header">
+            <div>
+                <h2 id="journeyModalTitle">Candidate Journey - Name</h2>
+                <p class="modal-subtitle">Complete timeline and journey tracking</p>
+            </div>
+            <button class="close-btn" onclick="closeJourneyModal()"><i class="fas fa-times"></i></button>
+        </div>
+
+        <!-- Candidate Info Cards -->
+        <div class="journey-info-grid">
+            <div class="journey-info-item">
+                <span class="info-label">Position Applied</span>
+                <span class="info-value" id="journeyPosition">Frontend Developer</span>
+            </div>
+            <div class="journey-info-item">
+                <span class="info-label">Application Date</span>
+                <span class="info-value" id="journeyDate">2024-10-07 at 02:45 PM</span>
+            </div>
+            <div class="journey-info-item">
+                <span class="info-label">Source</span>
+                <span class="info-value" id="journeySource">Google Forms</span>
+            </div>
+            <div class="journey-info-item">
+                <span class="info-label">Current Stage</span>
+                <span class="stage-badge stage-offer" id="journeyCurrentStage">Offer Extended</span>
+            </div>
+        </div>
+
+        <!-- Journey Timeline -->
+        <h3 class="timeline-title">Journey Timeline</h3>
+        <div class="journey-timeline" id="journeyTimelineContent">
+            <!-- Timeline items will be populated dynamically -->
+            <div class="journey-loading"><i class="fas fa-spinner fa-spin"></i> Loading journey...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Stage Candidates Dropdown Modal -->
+<div id="stageCandidatesModal" class="modal-backdrop" style="display: none;">
+    <div class="stage-modal-content">
+        <div class="stage-modal-header">
+            <div>
+                <h2 id="stageCandidatesTitle">Candidates - Stage</h2>
+                <p class="stage-modal-subtitle" id="stageCandidatesCount">0 candidates</p>
+            </div>
+            <button class="stage-close-btn" onclick="closeStageCandidatesModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="stageCandidatesList" class="stage-candidates-container">
+            <!-- Candidates list will be populated dynamically -->
+            <div class="journey-loading"><i class="fas fa-spinner fa-spin"></i> Loading candidates...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openTab(evt, tabName) {
+        // Hide all tab content
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+
+        // Remove active class from all buttons
+        tablinks = document.getElementsByClassName("tab");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+
+        // Show current tab and add active class to button
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+
+        // Save active tab to localStorage
+        localStorage.setItem('dashboardActiveTab', tabName);
+    }
+
+    // Restore active tab on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        var savedTab = localStorage.getItem('dashboardActiveTab');
+        if (savedTab && document.getElementById(savedTab)) {
+            // Hide all tabs first
+            var tabcontent = document.getElementsByClassName("tab-content");
+            for (var i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            // Remove active class from all buttons
+            var tablinks = document.getElementsByClassName("tab");
+            for (var i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            // Show saved tab
+            document.getElementById(savedTab).style.display = "block";
+            // Find and activate the corresponding button
+            var buttons = document.querySelectorAll('.tab');
+            buttons.forEach(function (btn) {
+                if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(savedTab)) {
+                    btn.className += " active";
+                }
+            });
+        }
+    });
+
+    // Stage Candidates Modal Functions
+    function showStageCandidates(stage, displayName) {
+        document.getElementById('stageCandidatesModal').style.display = 'flex';
+        document.getElementById('stageCandidatesTitle').textContent = displayName + ' Candidates';
+        document.getElementById('stageCandidatesList').innerHTML = '<div class="journey-loading"><i class="fas fa-spinner fa-spin"></i> Loading candidates...</div>';
+
+        fetch('/api/candidates/by-stage?stage=' + encodeURIComponent(stage))
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('stageCandidatesCount').textContent = data.count + ' candidate' + (data.count !== 1 ? 's' : '');
+
+                if (data.candidates.length === 0) {
+                    document.getElementById('stageCandidatesList').innerHTML = '<div class="stage-empty-state"><i class="fas fa-users"></i><p>No candidates in this stage</p></div>';
+                    return;
+                }
+
+                let html = '<div class="stage-candidates-list">';
+                data.candidates.forEach(c => {
+                    html += `
+                        <div class="stage-candidate-item" onclick="window.location.href='/reviews#candidate-${c.id}'" style="cursor: pointer;">
+                            <div class="stage-candidate-info">
+                                <div class="stage-candidate-name">${c.name}</div>
+                                <div class="stage-candidate-details">${c.position} • ${c.email || 'No email'}</div>
+                            </div>
+                            <div class="stage-candidate-stage">
+                                <span class="stage-badge stage-${c.current_stage.toLowerCase().replace(' ', '-')}">${c.current_stage}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                document.getElementById('stageCandidatesList').innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error fetching candidates:', error);
+                document.getElementById('stageCandidatesList').innerHTML = '<div class="journey-error">Failed to load candidates.</div>';
+            });
+    }
+
+    function closeStageCandidatesModal() {
+        document.getElementById('stageCandidatesModal').style.display = 'none';
+    }
+
+    // Candidate Journey Modal Functions
+    function openJourneyModal(candidateId) {
+        document.getElementById('candidateJourneyModal').style.display = 'flex';
+        document.getElementById('journeyTimelineContent').innerHTML = '<div class="journey-loading"><i class="fas fa-spinner fa-spin"></i> Loading journey...</div>';
+
+        fetch('/api/candidate/' + candidateId + '/journey')
+            .then(response => response.json())
+            .then(data => {
+                populateJourneyModal(data);
+            })
+            .catch(error => {
+                console.error('Error fetching journey:', error);
+                document.getElementById('journeyTimelineContent').innerHTML = '<div class="journey-error">Failed to load journey data.</div>';
+            });
+    }
+
+    function closeJourneyModal() {
+        document.getElementById('candidateJourneyModal').style.display = 'none';
+    }
+
+    function populateJourneyModal(data) {
+        document.getElementById('journeyModalTitle').textContent = 'Candidate Journey - ' + data.candidate.name;
+        document.getElementById('journeyPosition').textContent = data.candidate.position;
+        document.getElementById('journeyDate').textContent = formatDateTime(data.candidate.applied_at);
+        document.getElementById('journeySource').textContent = data.candidate.source;
+
+        var stageEl = document.getElementById('journeyCurrentStage');
+        stageEl.textContent = formatStage(data.candidate.current_stage);
+        stageEl.className = 'stage-badge stage-' + getStageClass(data.candidate.current_stage);
+
+        // Populate timeline
+        var timelineContainer = document.getElementById('journeyTimelineContent');
+        if (data.journey.length === 0) {
+            // If no journey stages, show at least "Applied"
+            timelineContainer.innerHTML = createTimelineItem({
+                stage: 'applied',
+                notes: 'Application received',
+                score: null,
+                interviewer: null,
+                created_at: data.candidate.applied_at
+            }, 1);
+        } else {
+            timelineContainer.innerHTML = data.journey.map(function (stage, index) {
+                return createTimelineItem(stage, index + 1);
+            }).join('');
+        }
+    }
+
+    function createTimelineItem(stage, number) {
+        var stageColors = {
+            'applied': 'blue', 'screening': 'orange', 'interview_scheduled': 'yellow',
+            'interview_completed': 'green', 'offer_extended': 'green', 'joined': 'teal', 'rejected': 'red'
+        };
+        var color = stageColors[stage.stage] || 'blue';
+        var scoreHtml = stage.score ? '<span class="timeline-score">Score: ' + stage.score + '/10</span>' : '';
+        var interviewerHtml = stage.interviewer ? '<div class="timeline-interviewer">Interviewer: ' + stage.interviewer + '</div>' : '';
+        var notesText = stage.notes || '';
+
+        return '<div class="timeline-item">' +
+            '<div class="timeline-number timeline-' + color + '">' + number + '</div>' +
+            '<div class="timeline-content">' +
+            '<div class="timeline-header">' +
+            '<span class="timeline-stage">' + formatStage(stage.stage) + '</span>' +
+            '<span class="timeline-date">' + formatDateTime(stage.created_at) + '</span>' +
+            '</div>' +
+            '<div class="timeline-notes">' + notesText + '</div>' +
+            interviewerHtml +
+            scoreHtml +
+            '</div>' +
+            '</div>';
+    }
+
+    function formatStage(stage) {
+        var names = {
+            'applied': 'Applied', 'screening': 'Screening', 'interview_scheduled': 'Interview Scheduled',
+            'interview_completed': 'Interview Completed', 'offer_extended': 'Offer Extended',
+            'joined': 'Joined', 'rejected': 'Rejected'
+        };
+        return names[stage] || stage || 'Applied';
+    }
+
+    function getStageClass(stage) {
+        var classes = {
+            'applied': 'applied', 'screening': 'screening', 'interview_scheduled': 'interview',
+            'interview_completed': 'interview', 'offer_extended': 'offer', 'joined': 'offer', 'rejected': 'rejected'
+        };
+        return classes[stage] || 'applied';
+    }
+
+    function formatDateTime(isoString) {
+        if (!isoString) return 'N/A';
+        var date = new Date(isoString);
+        var options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+        var timeOptions = { hour: '2-digit', minute: '2-digit' };
+        return date.toLocaleDateString(undefined, options) + ' at ' + date.toLocaleTimeString(undefined, timeOptions);
+    }
+
+    // Close modal when clicking backdrop
+    window.onclick = function (event) {
+        var modal = document.getElementById('candidateJourneyModal');
+        var moveModal = document.getElementById('moveStageModal');
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+        if (event.target == moveModal) {
+            moveModal.style.display = 'none';
+        }
+    }
+
+    // Move Stage Logic
+    let currentMoveCandidateId = null;
+
+    function openMoveStageModalFromButton(btn) {
+        const id = btn.getAttribute('data-id');
+        const name = btn.getAttribute('data-name');
+        const stage = btn.getAttribute('data-stage');
+        openMoveStageModal(id, name, stage);
+    }
+
+    function openMoveStageModal(candidateId, name, currentStage) {
+        currentMoveCandidateId = candidateId;
+        document.getElementById('moveStageModal').style.display = 'flex';
+        document.getElementById('moveStageCandidateName').textContent = name;
+        document.getElementById('moveStageCurrent').textContent = currentStage;
+        document.getElementById('stageNotes').value = '';
+    }
+
+    function closeMoveStageModal() {
+        document.getElementById('moveStageModal').style.display = 'none';
+        currentMoveCandidateId = null;
+    }
+
+    function submitMoveStage() {
+        if (!currentMoveCandidateId) return;
+
+        const newStage = document.getElementById('newStageSelect').value;
+        const notes = document.getElementById('stageNotes').value;
+        const btn = document.querySelector('#moveStageModal .btn-dark-action');
+        const originalText = btn.textContent;
+
+        btn.textContent = 'Updating...';
+        btn.disabled = true;
+
+        fetch('/api/candidate/' + currentMoveCandidateId + '/stage', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                stage: newStage,
+                notes: notes
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    // Success - reload to show new state
+                    window.location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update stage');
+            })
+            .finally(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            });
+    }
+</script>
+{% endblock %}

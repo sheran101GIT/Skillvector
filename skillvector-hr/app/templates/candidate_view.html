@@ -1,0 +1,296 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="candidate-profile-page">
+    <!-- Back Link & Page Header -->
+    <div class="profile-page-header">
+        <div class="header-left">
+            <a href="{{ url_for('candidates.all_candidates') }}" class="back-link">
+                <i class="fas fa-arrow-left"></i> Back to Analysis
+            </a>
+            <div class="page-title-block">
+                <h1>Candidate Profile</h1>
+                <p class="page-subtitle">Detailed view of {{ candidate.name }}'s profile and qualifications</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <form action="{{ url_for('candidates.reanalyze', candidate_id=candidate.id) }}" method="POST"
+                style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-refresh" title="Restart Analysis">
+                    <i class="fas fa-sync-alt"></i> Refresh Analysis
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Candidate Info Card -->
+    <div class="candidate-info-card">
+        <div class="candidate-info-left">
+            <div class="candidate-avatar-large">
+                {{ candidate.name[:2].upper() }}
+            </div>
+            <div class="candidate-info-main">
+                <h2 class="candidate-name-large">{{ candidate.name }}</h2>
+                <p class="candidate-role">{{ candidate.job.title if candidate.job else 'Software Developer' }}</p>
+                <div class="candidate-meta-row">
+                    <span class="meta-item">
+                        <i class="far fa-envelope"></i>
+                        <a href="mailto:{{ candidate.email }}">{{ candidate.email or 'No email' }}</a>
+                    </span>
+                    {% if candidate.phone %}
+                    <span class="meta-item">
+                        <i class="fas fa-phone"></i> {{ candidate.phone }}
+                    </span>
+                    {% endif %}
+                    <span class="meta-item">
+                        <i class="fas fa-map-marker-alt"></i> {{ candidate.location or 'Location not specified' }}
+                    </span>
+                </div>
+                <div class="candidate-meta-row">
+                    <span class="meta-item">
+                        <i class="far fa-clock"></i> {{ candidate.experience_years if candidate.experience_years else
+                        'Unknown' }} experience
+                    </span>
+                    <span class="meta-item">
+                        <i class="far fa-calendar-alt"></i> Applied on {{ candidate.created_at.strftime('%Y-%m-%d') }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="candidate-score-large">
+            {% if candidate.processing_status == 'completed' and analysis %}
+            {{ "%.0f"|format(analysis.final_score * 100) }}% Match
+            {% elif candidate.processing_status == 'failed' %}
+            <span class="score-failed">Failed</span>
+            {% elif candidate.processing_status in ['pending', 'processing'] %}
+            <span class="score-processing">Processing...</span>
+            {% else %}
+            <span class="score-pending">Pending</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Processing Status Banner -->
+    {% if candidate.processing_status in ['pending', 'processing'] %}
+    <div class="processing-banner">
+        <i class="fas fa-spinner fa-spin"></i>
+        <div>
+            <strong>Analyzing Candidate...</strong>
+            <p>We are extracting skills, generating embeddings, and getting AI suggestions. This page will refresh
+                automatically.</p>
+        </div>
+        <script>
+            setTimeout(function () { window.location.reload(1); }, 3000);
+        </script>
+    </div>
+    {% elif candidate.processing_status == 'failed' %}
+    <div class="error-banner">
+        <i class="fas fa-exclamation-circle"></i>
+        <div>
+            <strong>Processing Failed</strong>
+            <p>{{ candidate.error_message or 'An error occurred during analysis.' }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Partial Failure / Warning Banner -->
+    {% if candidate.error_message and 'Extraction Failed' in candidate.error_message %}
+    <div class="warning-banner"
+        style="background-color: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ffeeba;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>AI Extraction Issue:</strong>
+        <span>Some candidate details could not be extracted due to an API error. {{ candidate.error_message }}</span>
+    </div>
+    {% endif %}
+
+    <!-- Main Content Flex Layout -->
+    <div class="profile-columns-wrapper">
+
+        <!-- LEFT COLUMN: Main Info -->
+        <div class="profile-left-col">
+            <!-- Technical Skills -->
+            <div class="grid-card area-skills">
+                <h3 class="section-title-icon">
+                    <i class="fas fa-code"></i> Technical Skills
+                </h3>
+                <div class="skills-tags-large">
+                    {% if candidate.skills %}
+                    {% for skill in candidate.skills %}
+                    <span class="skill-tag-profile">{{ skill }}</span>
+                    {% endfor %}
+                    {% elif analysis and analysis.skills_matched %}
+                    {% for skill in analysis.skills_matched %}
+                    <span class="skill-tag-profile">{{ skill }}</span>
+                    {% endfor %}
+                    {% else %}
+                    <span class="no-data-text">Skills will be extracted after processing</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Work Experience -->
+            <div class="grid-card area-experience">
+                <h3 class="section-title-icon">
+                    <i class="fas fa-briefcase"></i> Work Experience
+                </h3>
+                {% if candidate.work_experience %}
+                <div class="experience-timeline">
+                    {% for exp in candidate.work_experience %}
+                    <div class="timeline-item">
+                        <div class="timeline-header">
+                            <h4 class="timeline-role">{{ exp.role }}</h4>
+                            <div class="timeline-meta">
+                                <span class="timeline-company"><i class="far fa-building"></i> {{ exp.company }}</span>
+                                <span class="meta-sep">•</span>
+                                <span class="timeline-date"><i class="far fa-calendar-alt"></i> {{ exp.duration or
+                                    exp.year or 'Date unknown' }}</span>
+                            </div>
+                        </div>
+                        <p class="timeline-desc">{{ exp.description }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="no-data-text">No work experience found.</p>
+                {% endif %}
+            </div>
+
+            <!-- Projects -->
+            {% if candidate.projects %}
+            <div class="grid-card area-projects">
+                <h3 class="section-title-icon">
+                    <i class="fas fa-project-diagram"></i> Key Projects
+                </h3>
+                <div class="projects-list-simple">
+                    {% for proj in candidate.projects %}
+                    <div class="project-item-simple">
+                        <h4 class="project-title">{{ proj.title }}</h4>
+                        <p class="project-desc">{{ proj.description }}</p>
+                        {% if proj.tech_stack %}
+                        <div class="project-tech">
+                            {% for tech in proj.tech_stack.split(',') %}
+                            <span class="tech-pill">{{ tech.strip() }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if not loop.last %}
+                        <hr class="card-divider">{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- RIGHT COLUMN: Analysis, Edu, Certs -->
+        <div class="profile-right-col">
+            <!-- Assessment / Resume Analysis -->
+            <div class="grid-card area-analysis">
+                <h3 class="section-title-icon">
+                    <i class="fas fa-clipboard-check"></i> Resume Analysis
+                </h3>
+                {% if analysis %}
+
+                <div class="analysis-stat-row">
+                    <div class="analysis-stat">
+                        <span class="stat-label">Technical Skills</span>
+                        <div class="stat-bar-container">
+                            <div class="stat-bar-fill" style="width: 92%"></div> <!-- Mock da/ta -->
+                        </div>
+                        <span class="stat-val">92%</span>
+                    </div>
+                    <div class="analysis-stat">
+                        <span class="stat-label">Experience</span>
+                        <div class="stat-bar-container">
+                            <div class="stat-bar-fill" style="width: 88%"></div>
+                        </div>
+                        <span class="stat-val">88%</span>
+                    </div>
+                    <div class="analysis-stat">
+                        <span class="stat-label">Education</span>
+                        <div class="stat-bar-container">
+                            <div class="stat-bar-fill" style="width: 95%"></div>
+                        </div>
+                        <span class="stat-val">95%</span>
+                    </div>
+                </div>
+
+                <div class="assessment-section mt-3">
+                    <h4>Missing Skills</h4>
+                    <div class="skills-tags-small">
+                        {% for skill in analysis.missing_skills %}
+                        <span class="skill-tag-danger">{{ skill }}</span>
+                        {% else %}
+                        <span class="no-data-text">None missing</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% else %}
+                <p class="no-data-text">Analysis pending...</p>
+                {% endif %}
+            </div>
+
+            <!-- Education -->
+            <div class="grid-card area-education">
+                <h3 class="section-title-icon">
+                    <i class="fas fa-graduation-cap"></i> Education
+                </h3>
+                {% if candidate.education %}
+                <ul class="simple-list">
+                    {% for edu in candidate.education %}
+                    <li>
+                        <strong>{{ edu.degree }}</strong><br>
+                        <span class="text-muted">{{ edu.institution }}</span>
+                        <span class="year-badge">{{ edu.year }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="no-data-text">No education info.</p>
+                {% endif %}
+            </div>
+
+            <!-- Certificates -->
+            {% if candidate.certificates %}
+            <div class="grid-card area-certs">
+                <h3 class="section-title-icon">
+                    <i class="fas fa-certificate"></i> Certifications
+                </h3>
+                <ul class="simple-list">
+                    {% for cert in candidate.certificates %}
+                    <li>
+                        <strong>{{ cert.name }}</strong><br>
+                        <span class="text-muted">{{ cert.issuer }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- AI Recommendations -->
+            {% if analysis and analysis.phrasing_suggestions %}
+            <div class="grid-card area-suggestions">
+                <h3 class="section-title-icon">
+                    <i class="fas fa-lightbulb"></i> AI Recommendations
+                </h3>
+                <ul class="recommendations-list">
+                    {% for suggestion in analysis.phrasing_suggestions %}
+                    {% if 'Gemini Error' in suggestion or 'Quota exceeded' in suggestion %}
+                    <li class="text-muted"><small><em>AI suggestions temporarily unavailable (Quota).</em></small></li>
+                    {% elif 'Failed' in suggestion or 'Error' in suggestion %}
+                    <li class="text-danger"><small><i class="fas fa-exclamation-circle"></i> {{ suggestion }}</small>
+                    </li>
+                    {% else %}
+                    <li>{{ suggestion }}</li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="auth-card" style="max-width: 800px; margin: 2rem auto;">
+    <div class="auth-card-header">
+        <h2>Edit Job</h2>
+        <p>Update job details</p>
+    </div>
+
+    <form method="POST" class="job-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-group">
+            <label for="title">Job Title</label>
+            <input type="text" id="title" name="title" value="{{ job.title }}" required class="form-input">
+        </div>
+
+        <div class="form-row-2" style="display:flex; gap:1rem;">
+            <div class="form-group" style="flex:1">
+                <label for="department">Department</label>
+                <input type="text" id="department" name="department" value="{{ job.department or '' }}"
+                    class="form-input">
+            </div>
+            <div class="form-group" style="flex:1">
+                <label for="location">Location</label>
+                <input type="text" id="location" name="location" value="{{ job.location or '' }}" class="form-input">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="experience_range">Experience Range</label>
+            <input type="text" id="experience_range" name="experience_range" value="{{ job.experience_range or '' }}"
+                class="form-input">
+        </div>
+
+        <div class="form-group">
+            <label for="required_skills">Required Skills (comma separated)</label>
+            <input type="text" id="required_skills" name="required_skills"
+                value="{{ ', '.join(job.required_skills) if job.required_skills else '' }}" class="form-input">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Job Description</label>
+            <textarea id="description" name="description" rows="10" required class="form-input"
+                style="width:100%">{{ job.description }}</textarea>
+        </div>
+
+        <div class="form-actions" style="margin-top:2rem; display:flex; gap:1rem;">
+            <button type="submit" class="btn-submit">Update Job</button>
+            <a href="{{ url_for('uploads.index') }}" class="btn-outline-action"
+                style="text-decoration:none; padding:1rem; border-radius:12px; border:1px solid #ccc; color:#333;">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

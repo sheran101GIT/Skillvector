@@ -1,0 +1,148 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dash-header-row">
+        <div>
+            <h1>Candidate Analysis</h1>
+            <p class="subtitle">Review and make decisions on candidate applications</p>
+        </div>
+        <div style="text-align:right">
+            <span class="badge-role">{{ current_user.name }}</span>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-row-simple">
+        <div class="metric-card small-pad">
+            <div class="metric-header-simple" style="justify-content: space-between;">
+                <span>Total Candidates</span>
+                <i class="far fa-star icon-grey"></i>
+            </div>
+            <div class="metric-value">{{ stats.total }}</div>
+        </div>
+
+        <div class="metric-card small-pad">
+            <div class="metric-header-simple" style="justify-content: space-between;">
+                <span>Approved</span>
+                <i class="fas fa-check-circle icon-green"></i>
+            </div>
+            <div class="metric-value">{{ stats.approved }}</div>
+        </div>
+
+        <div class="metric-card small-pad">
+            <div class="metric-header-simple" style="justify-content: space-between;">
+                <span>Pending Review</span>
+                <i class="far fa-clock icon-orange"></i>
+            </div>
+            <div class="metric-value">{{ stats.pending }}</div>
+        </div>
+
+        <div class="metric-card small-pad">
+            <div class="metric-header-simple" style="justify-content: space-between;">
+                <span>Rejected</span>
+                <i class="fas fa-times-circle icon-red"></i>
+            </div>
+            <div class="metric-value">{{ stats.rejected }}</div>
+        </div>
+    </div>
+
+    <!-- Filter Bar (Mock) -->
+    <div class="filter-section">
+        <h3 class="filter-title">Filters</h3>
+        <div class="filter-bar">
+            <div class="filter-dropdown" style="flex:1">
+                <span>All Status</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="filter-dropdown" style="flex:1">
+                <span>All Positions</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Table -->
+    <div class="table-section">
+        <div class="section-top-header">
+            <h3>Candidate Reviews</h3>
+            <p class="section-subtitle">Detailed analysis and decision making for each candidate</p>
+        </div>
+
+        <table class="candidate-table">
+            <thead>
+                <tr>
+                    <th width="15%">Status</th>
+                    <th width="20%">Candidate</th>
+                    <th width="15%">Position</th>
+                    <th width="10%">Experience</th>
+                    <th width="15%">Match Score</th>
+                    <th width="10%">Applied Date</th>
+                    <th width="15%" style="text-align:right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for candidate in candidates %}
+                <tr>
+                    <td>
+                        {% if candidate.decision_status == 'approved' %}
+                        <span class="status-pill status-green"><i class="fas fa-check"></i> Approved</span>
+                        {% elif candidate.decision_status == 'rejected' %}
+                        <span class="status-pill status-red"><i class="fas fa-times-circle"></i> Rejected</span>
+                        {% else %}
+                        <span class="status-pill status-yellow"><i class="far fa-clock"></i> Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="cand-cell-profile">
+                            <div class="cand-cell-info">
+                                <div class="name">{{ candidate.name }}</div>
+                                <div class="id">{{ candidate.email }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="position-tag">{{ candidate.job.title }}</div>
+                    </td>
+                    <td>
+                        {{ candidate.experience_years }} years
+                    </td>
+                    <td>
+                        {% set score_percent = (candidate.analysis.final_score * 100)|int if candidate.analysis else 0
+                        %}
+                        <div class="match-score-pill">{{ score_percent }}%</div>
+                    </td>
+                    <td>{{ candidate.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td style="text-align:right">
+                        <div class="actions-cell">
+                            <a href="{{ url_for('candidates.view', candidate_id=candidate.id) }}"
+                                class="icon-action-btn" title="View">
+                                <i class="far fa-user"></i>
+                            </a>
+
+                            <form action="{{ url_for('analysis.decide', candidate_id=candidate.id, action='approve') }}"
+                                method="POST" style="display:inline">
+                                <button type="submit" class="icon-action-btn btn-green" title="Approve">
+                                    <i class="far fa-thumbs-up"></i>
+                                </button>
+                            </form>
+
+                            <form action="{{ url_for('analysis.decide', candidate_id=candidate.id, action='reject') }}"
+                                method="POST" style="display:inline">
+                                <button type="submit" class="icon-action-btn btn-red" title="Reject">
+                                    <i class="far fa-thumbs-down"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align:center; padding: 2rem;">No candidates candidates found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

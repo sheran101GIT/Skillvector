@@ -1,0 +1,212 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dash-header-row">
+        <div>
+            <h1>All Registered Candidates</h1>
+            <p class="subtitle">Complete database of all candidate applications</p>
+        </div>
+        <button class="btn btn-outline"><i class="fas fa-file-export"></i> Export CSV</button>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row-simple">
+        <div class="metric-card small-pad">
+            <div class="metric-sub">Total Candidates</div>
+            <div class="metric-value">{{ stats.total }}</div>
+        </div>
+        <div class="metric-card small-pad">
+            <div class="metric-sub">Active Applications</div>
+            <div class="metric-value">{{ stats.active }}</div>
+        </div>
+        <div class="metric-card small-pad">
+            <div class="metric-sub">Joined</div>
+            <div class="metric-value">{{ stats.joined }}</div>
+        </div>
+        <div class="metric-card small-pad">
+            <div class="metric-sub">This Week</div>
+            <div class="metric-value">{{ stats.week }}</div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-section">
+        <h3 class="filter-title">Filter Candidates</h3>
+        <div class="filter-bar">
+            <div class="search-input">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchFilter" placeholder="Search by name, email, or position..."
+                    oninput="filterCandidates()">
+            </div>
+
+            <select id="stageFilter" class="filter-select" onchange="filterCandidates()">
+                <option value="">All Stages</option>
+                <option value="Applied">Applied</option>
+                <option value="Aptitude">Aptitude</option>
+                <option value="Screening">Screening</option>
+                <option value="Group Discussion">Group Discussion</option>
+                <option value="Technical Round">Technical Round</option>
+                <option value="HR Round">HR Round</option>
+                <option value="Interview Scheduled">Interview Scheduled</option>
+                <option value="Interview Completed">Interview Completed</option>
+                <option value="Selected">Selected</option>
+                <option value="Offer Extended">Offer Extended</option>
+                <option value="Joined">Joined</option>
+                <option value="Rejected">Rejected</option>
+            </select>
+
+            <select id="jobFilter" class="filter-select" onchange="filterCandidates()">
+                <option value="">All Jobs</option>
+                {% for job in jobs %}
+                <option value="{{ job.id }}">{{ job.title }}</option>
+                {% endfor %}
+            </select>
+
+            <select id="statusFilter" class="filter-select" onchange="filterCandidates()">
+                <option value="">All Status</option>
+                <option value="processing">Processing</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+            </select>
+
+            <button class="btn btn-outline" onclick="resetFilters()"><i class="fas fa-undo"></i> Reset</button>
+        </div>
+    </div>
+
+    <!-- Candidate List -->
+    <div class="table-section">
+        <h3 class="filter-title">Candidate List <span
+                style="font-weight:400; color:#6b7280; font-size:0.85rem; margin-left:0.5rem">{{ candidates|length }}
+                candidates found</span></h3>
+
+        <table class="candidate-table">
+            <thead>
+                <tr>
+                    <th width="25%">Candidate</th>
+                    <th width="25%">Contact</th>
+                    <th width="20%">Position</th>
+                    <th width="10%">Applied Date</th>
+                    <th width="10%">Status</th>
+                    <th width="10%" style="text-align:right">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="candidatesTableBody">
+                {% for candidate in candidates %}
+                <tr class="candidate-row" data-name="{{ candidate.name|lower }}"
+                    data-email="{{ candidate.email|lower }}"
+                    data-position="{{ (candidate.job.title if candidate.job else 'General Application')|lower }}"
+                    data-stage="{{ candidate.current_stage or 'applied' }}" data-job-id="{{ candidate.job_id or '' }}"
+                    data-status="{{ candidate.processing_status }}">
+                    <td>
+                        <div class="cand-cell-profile">
+                            <!-- Using initials or placeholder avatar -->
+                            <div class="table-avatar">{{ candidate.name[:2].upper() }}</div>
+                            <div class="cand-cell-info">
+                                <div class="name">{{ candidate.name }}</div>
+                                <div class="id">ID: {{ candidate.id }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="contact-info">
+                            <div><i class="far fa-envelope"></i> {{ candidate.email }}</div>
+                            <!-- Placeholder phone if not in DB -->
+                            <div><i class="fas fa-phone-alt"></i> {{ candidate.phone or '+1 (555) 000-0000' }}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="position-info">
+                            <i class="fas fa-briefcase"></i> {{ candidate.job.title if candidate.job else 'General
+                            Application' }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="date-info">
+                            <i class="far fa-calendar"></i> {{ candidate.created_at.strftime('%m/%d/%Y') }}
+                        </div>
+                    </td>
+                    <td>
+                        {% set status_class = 'status-screening' %}
+                        {% if candidate.processing_status == 'completed' %}
+                        {% set status_class = 'status-green' %}
+                        {% elif candidate.processing_status == 'failed' %}
+                        {% set status_class = 'status-red' %}
+                        {% endif %}
+                        <span class="status-pill {{ status_class }}">{{ candidate.processing_status|capitalize }}</span>
+                    </td>
+                    <td style="text-align:right">
+                        <a href="{{ url_for('candidates.view', candidate_id=candidate.id) }}" class="btn-icon">
+                            <i class="far fa-eye"></i> View
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align:center; padding: 2rem;">No candidates found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    function filterCandidates() {
+        const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
+        const stageFilter = document.getElementById('stageFilter').value;
+        const jobFilter = document.getElementById('jobFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+
+        const rows = document.querySelectorAll('#candidatesTableBody .candidate-row');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const name = row.dataset.name || '';
+            const email = row.dataset.email || '';
+            const position = row.dataset.position || '';
+            const stage = row.dataset.stage || '';
+            const jobId = row.dataset.jobId || '';
+            const status = row.dataset.status || '';
+
+            // Search filter (name, email, position)
+            const matchesSearch = !searchTerm ||
+                name.includes(searchTerm) ||
+                email.includes(searchTerm) ||
+                position.includes(searchTerm);
+
+            // Stage filter
+            const matchesStage = !stageFilter || stage === stageFilter;
+
+            // Job filter
+            const matchesJob = !jobFilter || jobId === jobFilter;
+
+            // Status filter
+            const matchesStatus = !statusFilter || status === statusFilter;
+
+            // Show/hide row
+            if (matchesSearch && matchesStage && matchesJob && matchesStatus) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Update count display
+        const countSpan = document.querySelector('.table-section .filter-title span');
+        if (countSpan) {
+            countSpan.textContent = visibleCount + ' candidate' + (visibleCount !== 1 ? 's' : '') + ' found';
+        }
+    }
+
+    function resetFilters() {
+        document.getElementById('searchFilter').value = '';
+        document.getElementById('stageFilter').value = '';
+        document.getElementById('jobFilter').value = '';
+        document.getElementById('statusFilter').value = '';
+        filterCandidates();
+    }
+</script>
+{% endblock %}

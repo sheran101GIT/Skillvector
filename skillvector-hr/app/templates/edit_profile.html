@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="section-header">
+        <div>
+            <h2>Edit Profile</h2>
+            <p class="section-subtitle">Update your personal information</p>
+        </div>
+    </div>
+
+    <div class="card" style="max-width: 600px; margin-top: 1rem;">
+        <form method="POST" action="{{ url_for('auth.edit_profile') }}">
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="name" class="form-label"
+                    style="display: block; margin-bottom: 0.5rem; color: #374151; font-weight: 500;">
+                    Full Name
+                </label>
+                <input type="text" id="name" name="name" class="form-input" value="{{ current_user.name or '' }}"
+                    required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <label for="email" class="form-label"
+                    style="display: block; margin-bottom: 0.5rem; color: #374151; font-weight: 500;">
+                    Email Address
+                </label>
+                <input type="email" id="email" name="email" class="form-input" value="{{ current_user.email }}" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem;">
+            </div>
+
+            <div class="form-actions" style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn-primary"
+                    style="background-color: #2563eb; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    Save Changes
+                </button>
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary"
+                    style="background-color: white; color: #374151; border: 1px solid #d1d5db; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 6px; font-weight: 500;">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

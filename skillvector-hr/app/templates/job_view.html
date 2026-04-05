@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="job-header">
+    <div>
+        <h1>{{ job.title }}</h1>
+        <p class="text-muted">Posted: {{ job.posted_at.strftime('%Y-%m-%d') }}</p>
+        <div class="skills-tags" style="margin-top: 0.5rem;">
+            {% for skill in job.required_skills %}
+            <span class="tag" style="background: #e2e8f0; color: #475569;">{{ skill }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    <a href="{{ url_for('candidates.upload', job_id=job.id) }}" class="btn btn-primary">Upload Resume</a>
+</div>
+
+<div class="search-section">
+    <input type="text" id="candidateSearch" placeholder="Search candidates..." data-job-id="{{ job.id }}">
+    <div id="searchResults" class="search-results"></div>
+</div>
+
+<h2>Candidates (Ranked by Fit)</h2>
+<div class="candidate-list">
+    {% for candidate, score in candidates_with_analysis %}
+    <div class="candidate-card">
+        <div class="candidate-score">
+            <span class="score-value">{{ "%.0f"|format(score * 100) }}%</span>
+            <span class="score-label">Match</span>
+        </div>
+        <div class="candidate-info">
+            <h3><a href="{{ url_for('candidates.view', candidate_id=candidate.id) }}">{{ candidate.name }}</a></h3>
+            <p>{{ candidate.email }}</p>
+            <div class="skills-tags">
+                {% for skill in candidate.skills %}
+                <span class="tag">{{ skill }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <p>No candidates uploaded yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

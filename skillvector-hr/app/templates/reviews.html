@@ -1,0 +1,715 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dash-header-row">
+        <div>
+            <h1>Candidate Review</h1>
+            <p class="subtitle">Send personalized progress analysis and review emails to all candidates</p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-row-simple">
+        <div class="metric-card small-pad">
+            <div class="metric-header-simple" style="justify-content: space-between;">
+                <span>Total Candidates</span>
+                <i class="fas fa-users icon-grey"></i>
+            </div>
+            <div class="metric-value">{{ stats.total }}</div>
+            <div class="metric-sub">All stages</div>
+        </div>
+
+        <div class="metric-card small-pad">
+            <div class="metric-header-simple" style="justify-content: space-between;">
+                <span>Reviews Sent</span>
+                <i class="fas fa-check-circle icon-green"></i>
+            </div>
+            <div class="metric-value">{{ stats.sent }}</div>
+            <div class="metric-sub">Email delivered</div>
+        </div>
+
+        <div class="metric-card small-pad">
+            <div class="metric-header-simple" style="justify-content: space-between;">
+                <span>Pending Reviews</span>
+                <i class="far fa-clock icon-orange"></i>
+            </div>
+            <div class="metric-value">{{ stats.pending }}</div>
+            <div class="metric-sub">Awaiting review</div>
+        </div>
+
+        <div class="metric-card small-pad">
+            <div class="metric-header-simple" style="justify-content: space-between;">
+                <span>Active Candidates</span>
+                <i class="fas fa-chart-line icon-blue"></i>
+            </div>
+            <div class="metric-value">{{ stats.active }}</div>
+            <div class="metric-sub">In progress</div>
+        </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="action-bar-row">
+        <form action="{{ url_for('reviews.send_all_pending') }}" method="POST"
+            onsubmit="return confirm('Are you sure you want to send emails to ALL pending candidates?');">
+            <button type="submit" class="btn btn-dark-action">
+                <i class="fas fa-paper-plane"></i> Send All Pending Reviews
+            </button>
+        </form>
+
+        <div class="filter-dropdown grey-bg">
+            <span>All Stages</span>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+
+        <div style="margin-left: auto;">
+            <span class="count-badge">{{ candidates|length }} candidates</span>
+        </div>
+    </div>
+
+    <!-- Main Content Section -->
+    <div class="table-section" style="margin-top: 2rem;">
+        <div class="section-top-header">
+            <h3>All Candidates</h3>
+            <p class="section-subtitle">Review and send personalized progress analysis emails to candidates</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="sub-tabs">
+            <a href="{{ url_for('reviews.index', status='pending') }}"
+                class="sub-tab {% if current_filter == 'pending' %}active{% endif %}">
+                Pending Reviews ({{ all_candidates|selectattr('review_status', 'equalto', 'pending')|list|length }})
+            </a>
+            <a href="{{ url_for('reviews.index', status='sent') }}"
+                class="sub-tab {% if current_filter == 'sent' %}active{% endif %}">
+                Sent ({{ all_candidates|selectattr('review_status', 'equalto', 'sent')|list|length }})
+            </a>
+            <a href="{{ url_for('reviews.index') }}" class="sub-tab {% if not current_filter %}active{% endif %}">
+                All ({{ stats.total }})
+            </a>
+        </div>
+
+        <!-- Table -->
+        <table class="candidate-table">
+            <thead>
+                <tr>
+                    <th width="20%">Candidate</th>
+                    <th width="20%">Applied For</th>
+                    <th width="15%">Current Stage</th>
+                    <th width="15%">Applied Date</th>
+                    <th width="15%">Review Status</th>
+                    <th width="15%" style="text-align:right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for candidate in candidates %}
+                <tr>
+                    <td>
+                        <div class="cand-cell-profile">
+                            <div class="table-avatar">{{ candidate.name[:2].upper() }}</div>
+                            <div class="cand-cell-info">
+                                <div class="name">{{ candidate.name }}</div>
+                                <div class="id">{{ candidate.email }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="position-tag">
+                            {{ candidate.job.title }}
+                        </div>
+                    </td>
+                    <td>
+                        <!-- Using processing_status as stage proxy -->
+                        {% set stage_color = 'bg-dark' %}
+                        {% if candidate.processing_status == 'completed' %} {% set stage_color = 'bg-blue' %} {% endif
+                        %}
+                        <span class="stage-pill {{ stage_color }}">{{ candidate.processing_status|capitalize }}</span>
+                    </td>
+                    <td>{{ candidate.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        {% if candidate.review_status == 'pending' %}
+                        <span class="status-pill status-orange"><i class="far fa-clock"></i> Pending</span>
+                        {% else %}
+                        <span class="status-pill status-green"><i class="fas fa-check"></i> Sent</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right">
+                        <div class="actions-cell">
+                            <button class="btn-icon" onclick="openReviewModal({{ candidate.id }})">
+                                <i class="far fa-eye"></i> View
+                            </button>
+                            <!-- Generate Email button -->
+                            <button class="btn btn-black-small"
+                                onclick="openDecisionModal({{ candidate.id }}, '{{ candidate.name }}', {{ candidate.job_id or 'null' }})">
+                                <i class="fas fa-magic"></i> Generate Email
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align:center; padding: 2rem;">No candidates found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    </div>
+</div>
+
+<!-- ── Review Analysis Modal (existing) ─────────────────────────── -->
+<div id="reviewAnalysisModal" class="modal-backdrop">
+    <div class="modal-content-large review-modal">
+        <div class="modal-header">
+            <div>
+                <h2 id="reviewModalTitle">Review Analysis - Name</h2>
+                <p class="modal-subtitle">Progress analysis and feedback overview</p>
+            </div>
+            <button class="close-btn" onclick="closeReviewModal()"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="review-info-row">
+            <div class="review-info-item">
+                <span class="info-label">Candidate</span>
+                <span class="info-value" id="reviewCandidateName">Sarah Johnson</span>
+            </div>
+            <div class="review-info-item">
+                <span class="info-label">Position</span>
+                <span class="info-value" id="reviewPosition">Frontend Developer</span>
+            </div>
+        </div>
+        <div class="review-stage-row">
+            <span class="info-label">Current Stage</span>
+            <span class="stage-badge stage-screening" id="reviewCurrentStage">In Screening</span>
+        </div>
+
+        <h3 class="review-section-title">Progress Analysis</h3>
+        <div class="analysis-cards" id="reviewAnalysisCards">
+            <div class="analysis-card">
+                <div class="analysis-card-header">
+                    <div class="analysis-card-title"><i class="far fa-star"></i><span>Promising Application</span></div>
+                    <span class="analysis-badge badge-high" id="reviewPromiseBadge">High</span>
+                </div>
+                <p class="analysis-card-text" id="reviewPromiseText">Your resume shows strong alignment with the role
+                    requirements.</p>
+            </div>
+            <div class="analysis-card">
+                <div class="analysis-card-header">
+                    <div class="analysis-card-title"><i class="fas fa-lock"></i><span>Current Status</span></div>
+                    <span class="analysis-badge badge-high" id="reviewStatusBadge">High</span>
+                </div>
+                <p class="analysis-card-text" id="reviewStatusText">Your application is currently being reviewed by our
+                    technical team.</p>
+            </div>
+            <div class="analysis-card">
+                <div class="analysis-card-header">
+                    <div class="analysis-card-title"><i class="fas fa-lightbulb"></i><span>Standing Out</span></div>
+                    <span class="analysis-badge badge-low" id="reviewStandingBadge">Low</span>
+                </div>
+                <p class="analysis-card-text" id="reviewStandingText">Consider developing skills in missing areas to
+                    strengthen your application.</p>
+            </div>
+        </div>
+
+        <h3 class="review-section-title">Latest Generated Email</h3>
+        <div id="reviewEmailStatus" style="margin-bottom: 0.75rem;"></div>
+        <div class="email-preview-box" id="reviewEmailContent">
+            <div class="email-subject" id="reviewEmailSubject"><strong>Subject:</strong> Loading...</div>
+            <div class="email-body" id="reviewEmailBody">
+                <p style="color:#888;">Loading latest email...</p>
+            </div>
+        </div>
+        <!-- Send to Candidate button -->
+        <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button id="sendEmailBtn" class="btn btn-dark-action" onclick="sendEmailToCandidate()"
+                style="display:none;">
+                <i class="fas fa-paper-plane"></i> Send to Candidate
+            </button>
+        </div>
+        <p id="sendConfirmText"
+            style="text-align:right; color:#16a34a; font-size:0.82rem; margin-top:0.5rem; display:none;"></p>
+    </div>
+</div>
+
+<!-- ── Move Stage Modal (existing) ─────────────────────────────── -->
+<div id="moveStageModal" class="modal-backdrop">
+    <div class="modal-content-large review-modal" style="max-width: 500px;">
+        <div class="modal-header">
+            <div>
+                <h2 id="moveStageTitle">Move Candidate Stage</h2>
+                <p class="modal-subtitle">Update candidate's progress in the hiring pipeline</p>
+            </div>
+            <button class="close-btn" onclick="closeMoveStageModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="review-info-row">
+            <div class="review-info-item">
+                <span class="info-label">Candidate</span>
+                <span class="info-value" id="moveStageCandidateName">...</span>
+            </div>
+            <div class="review-info-item">
+                <span class="info-label">Current Stage</span>
+                <span class="info-value" id="moveStageCurrent">...</span>
+            </div>
+        </div>
+        <div style="margin-top: 1.5rem;">
+            <label class="info-label" style="display:block; margin-bottom: 0.5rem;">New Stage</label>
+            <select id="newStageSelect" class="form-select"
+                style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid #ddd;">
+                <optgroup label="Initial Stages">
+                    <option value="Aptitude">Aptitude</option>
+                    <option value="Screening">Screening</option>
+                </optgroup>
+                <optgroup label="Interview Process">
+                    <option value="Group Discussion">Group Discussion</option>
+                    <option value="Technical Round">Technical Round</option>
+                    <option value="HR Round">HR Round</option>
+                    <option value="Interview Scheduled">Interview Scheduled</option>
+                    <option value="Interview Completed">Interview Completed</option>
+                </optgroup>
+                <optgroup label="Decision">
+                    <option value="Selected">Selected</option>
+                    <option value="Offer Extended">Offer Extended</option>
+                    <option value="Rejected">Rejected</option>
+                </optgroup>
+            </select>
+        </div>
+        <div style="margin-top: 1.5rem;">
+            <label class="info-label" style="display:block; margin-bottom: 0.5rem;">Notes (Optional)</label>
+            <textarea id="stageNotes" rows="4"
+                style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid #ddd; font-family: inherit;"
+                placeholder="Add details about this stage change..."></textarea>
+        </div>
+        <div style="margin-top: 2rem; text-align: right;">
+            <button class="btn btn-disabled" onclick="closeMoveStageModal()"
+                style="margin-right: 0.5rem;">Cancel</button>
+            <button class="btn btn-dark-action" onclick="submitMoveStage()">Confirm Move</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── NEW: Decision Choice Modal ──────────────────────────────── -->
+<div id="decisionModal" class="modal-backdrop">
+    <div class="modal-content-large review-modal" style="max-width: 480px;">
+        <div class="modal-header">
+            <div>
+                <h2>Generate Review Email</h2>
+                <p class="modal-subtitle" id="decisionModalSubtitle">What is the decision for this candidate?</p>
+            </div>
+            <button class="close-btn" onclick="closeDecisionModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="decision-cards-row">
+            <div class="decision-card decision-selected" onclick="triggerGenerate('selected')">
+                <div class="decision-card-icon">✅</div>
+                <div class="decision-card-label">Selected</div>
+                <div class="decision-card-desc">Candidate is moving forward</div>
+            </div>
+            <div class="decision-card decision-rejected" onclick="triggerGenerate('rejected')">
+                <div class="decision-card-icon">❌</div>
+                <div class="decision-card-label">Rejected</div>
+                <div class="decision-card-desc">Candidate is not selected</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── NEW: Loading/Generating Overlay ─────────────────────────── -->
+<div id="generatingOverlay" class="modal-backdrop" style="display:none;">
+    <div class="generating-spinner-box">
+        <div class="spinner-ring"></div>
+        <p class="generating-text">Generating email with AI...</p>
+        <p class="generating-sub">Analysing journey notes & match data</p>
+    </div>
+</div>
+
+<!-- ── NEW: Email Preview Modal ────────────────────────────────── -->
+<div id="emailPreviewModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-content-large review-modal" style="max-width: 680px;">
+        <div class="modal-header">
+            <div>
+                <h2>AI-Generated Review Email</h2>
+                <p class="modal-subtitle" id="previewModalSubtitle">Review, edit if needed, then copy to clipboard</p>
+            </div>
+            <button class="close-btn" onclick="closeEmailPreviewModal()"><i class="fas fa-times"></i></button>
+        </div>
+
+        <!-- Decision badge -->
+        <div style="margin-bottom: 1rem;">
+            <span id="previewDecisionBadge" class="status-pill"></span>
+        </div>
+
+        <!-- Editable Subject -->
+        <div class="preview-field-group">
+            <label class="info-label">Subject Line</label>
+            <input type="text" id="previewSubjectInput" class="preview-editable-field" placeholder="Email subject...">
+        </div>
+
+        <!-- Editable Body -->
+        <div class="preview-field-group" style="margin-top: 1rem;">
+            <label class="info-label">Email Body</label>
+            <textarea id="previewBodyTextarea" class="preview-editable-field" rows="12"
+                placeholder="Email body..."></textarea>
+        </div>
+
+        <!-- Stage Notes Accordion -->
+        <div class="preview-field-group" style="margin-top: 1rem;">
+            <button class="accordion-toggle" onclick="toggleAccordion()">
+                <i class="fas fa-chevron-right" id="accordionIcon"></i>
+                <span>Stage Notes Used (AI Input)</span>
+            </button>
+            <div id="accordionContent" class="accordion-content" style="display:none;">
+                <pre id="previewNotesSnapshot" class="notes-snapshot-box">Loading...</pre>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; justify-content: flex-end; flex-wrap: wrap;">
+            <button class="btn btn-disabled" onclick="closeEmailPreviewModal()">Close</button>
+            <button class="btn btn-dark-action" id="regenerateBtn" onclick="regenerateEmail()">
+                <i class="fas fa-redo"></i> Regenerate
+            </button>
+            <button class="btn btn-success-action" id="copyBtn" onclick="copyEmailToClipboard()">
+                <i class="fas fa-copy"></i> Copy to Clipboard
+            </button>
+        </div>
+        <p id="copyConfirmText"
+            style="text-align:right; color: #16a34a; font-size: 0.82rem; margin-top: 0.5rem; display:none;">
+            ✓ Copied! Paste into your email client.
+        </p>
+    </div>
+</div>
+
+<script>
+    // ── State ────────────────────────────────────────────────────────
+    let _currentCandidateId = null;
+    let _currentJobId = null;
+    let _currentDecision = null;
+    let _currentEmailId = null;
+
+    // ── Existing Review Analysis Modal ───────────────────────────────
+    // Track the review email id for the current View modal
+    let _viewEmailId = null;
+    let _viewCandidateEmail = null;
+
+    function openReviewModal(candidateId) {
+        _viewEmailId = null;
+        _viewCandidateEmail = null;
+        document.getElementById('sendEmailBtn').style.display = 'none';
+        document.getElementById('sendConfirmText').style.display = 'none';
+        document.getElementById('reviewEmailSubject').innerHTML = '<strong>Subject:</strong> Loading...';
+        document.getElementById('reviewEmailBody').innerHTML = '<p style="color:#888;">Loading latest email...</p>';
+        document.getElementById('reviewEmailStatus').innerHTML = '';
+        document.getElementById('reviewAnalysisModal').style.display = 'flex';
+
+        // Run both fetches in parallel, then update UI together
+        Promise.all([
+            fetch('/api/candidate/' + candidateId + '/review-analysis').then(r => r.json()),
+            fetch('/api/candidate/' + candidateId + '/email-history').then(r => r.json())
+        ]).then(([analysisData, historyData]) => {
+            // Populate analysis cards
+            populateReviewModal(analysisData);
+            _viewCandidateEmail = analysisData.candidate ? analysisData.candidate.email : null;
+
+            // Populate email section
+            if (historyData.emails && historyData.emails.length > 0) {
+                const latest = historyData.emails[0]; // most recent first
+                _viewEmailId = latest.id;
+
+                document.getElementById('reviewEmailSubject').innerHTML =
+                    '<strong>Subject:</strong> ' + (latest.subject || 'N/A');
+                document.getElementById('reviewEmailBody').innerHTML =
+                    '<pre style="white-space:pre-wrap;font-family:inherit;margin:0;">' +
+                    (latest.body || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+                    '</pre>';
+
+                // Decision badge + timestamp
+                const dec = latest.decision || '';
+                const badge = dec === 'selected'
+                    ? '<span class="status-pill status-green" style="font-size:0.78rem;">✅ Selected</span>'
+                    : '<span class="status-pill status-red" style="font-size:0.78rem;">❌ Rejected</span>';
+                document.getElementById('reviewEmailStatus').innerHTML =
+                    badge + ' &nbsp; <span style="color:#888;font-size:0.8rem;">Generated on ' + (latest.created_at || '') + '</span>';
+
+                // Show Send button only if candidate has an email
+                if (_viewCandidateEmail) {
+                    document.getElementById('sendEmailBtn').style.display = 'inline-flex';
+                } else {
+                    document.getElementById('reviewEmailStatus').innerHTML +=
+                        ' &nbsp; <span style="color:#e55;font-size:0.8rem;">(No candidate email on file — cannot send)</span>';
+                }
+            } else {
+                document.getElementById('reviewEmailSubject').innerHTML = '<strong>Subject:</strong> No email generated yet';
+                document.getElementById('reviewEmailBody').innerHTML =
+                    '<p style="color:#999; text-align:center; padding: 1.5rem 0;">' +
+                    'No review email has been generated for this candidate yet.<br>' +
+                    'Use the <strong>Generate Email</strong> button in the table to create one.' +
+                    '</p>';
+            }
+        }).catch(err => console.error('Error loading review modal data:', err));
+    }
+
+    function sendEmailToCandidate() {
+        if (!_viewEmailId) return;
+        const btn = document.getElementById('sendEmailBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+        // Read CSRF token from meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        fetch('/reviews/send-email/' + _viewEmailId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Failed to send email:\n' + data.error);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send to Candidate';
+                } else {
+                    const conf = document.getElementById('sendConfirmText');
+                    conf.textContent = '✓ ' + data.message;
+                    conf.style.display = 'block';
+                    btn.innerHTML = '<i class="fas fa-check"></i> Sent!';
+                    btn.style.background = '#16a34a';
+                    // Refresh page after short delay to update status pill
+                    setTimeout(() => window.location.reload(), 2000);
+                }
+            })
+            .catch(() => {
+                alert('Network error — could not send email.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send to Candidate';
+            });
+    }
+
+    function closeReviewModal() {
+        document.getElementById('reviewAnalysisModal').style.display = 'none';
+    }
+
+    function populateReviewModal(data) {
+        document.getElementById('reviewModalTitle').textContent = 'Review Analysis - ' + data.candidate.name;
+        document.getElementById('reviewCandidateName').textContent = data.candidate.name;
+        document.getElementById('reviewPosition').textContent = data.candidate.position;
+        document.getElementById('reviewCurrentStage').textContent = data.candidate.current_stage;
+
+        if (data.analysis) {
+            const score = data.analysis.final_score || 0;
+            const setBadge = (id, val) => {
+                const el = document.getElementById(id);
+                if (score >= 0.7) { el.textContent = 'High'; el.className = 'analysis-badge badge-high'; }
+                else if (score >= 0.4) { el.textContent = 'Medium'; el.className = 'analysis-badge badge-medium'; }
+                else { el.textContent = 'Low'; el.className = 'analysis-badge badge-low'; }
+            };
+            setBadge('reviewPromiseBadge'); setBadge('reviewStatusBadge'); setBadge('reviewStandingBadge');
+            if (data.analysis.skills_matched && data.analysis.skills_matched.length > 0)
+                document.getElementById('reviewPromiseText').textContent =
+                    'Strong alignment with the ' + data.candidate.position + ' requirements, particularly: ' +
+                    data.analysis.skills_matched.slice(0, 3).join(', ') + '.';
+            if (data.analysis.missing_skills && data.analysis.missing_skills.length > 0)
+                document.getElementById('reviewStandingText').textContent =
+                    'Consider developing skills in: ' + data.analysis.missing_skills.slice(0, 3).join(', ') + '.';
+        }
+        document.getElementById('reviewEmailSubject').innerHTML =
+            '<strong>Subject:</strong> Application Status - ' + data.candidate.position + ' Position';
+        document.getElementById('reviewEmailBody').innerHTML =
+            '<p>Dear ' + data.candidate.name + ',</p>' +
+            '<p>Thank you for your application for the ' + data.candidate.position + ' position.</p>';
+    }
+
+    // ── Move Stage Modal (existing) ──────────────────────────────────
+    let currentMoveCandidateId = null;
+
+    function openMoveStageModal(candidateId, name, currentStage) {
+        currentMoveCandidateId = candidateId;
+        document.getElementById('moveStageModal').style.display = 'flex';
+        document.getElementById('moveStageCandidateName').textContent = name;
+        document.getElementById('moveStageCurrent').textContent = currentStage;
+        document.getElementById('stageNotes').value = '';
+    }
+
+    function closeMoveStageModal() {
+        document.getElementById('moveStageModal').style.display = 'none';
+        currentMoveCandidateId = null;
+    }
+
+    function submitMoveStage() {
+        if (!currentMoveCandidateId) return;
+        const newStage = document.getElementById('newStageSelect').value;
+        const notes = document.getElementById('stageNotes').value;
+        const btn = document.querySelector('#moveStageModal .btn-dark-action');
+        btn.textContent = 'Updating...'; btn.disabled = true;
+        fetch('/api/candidate/' + currentMoveCandidateId + '/stage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stage: newStage, notes: notes })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) alert('Error: ' + data.error);
+                else window.location.reload();
+            })
+            .catch(() => alert('Failed to update stage'))
+            .finally(() => { btn.textContent = 'Confirm Move'; btn.disabled = false; });
+    }
+
+    // ── NEW: Generate Email Flow ─────────────────────────────────────
+    function openDecisionModal(candidateId, name, jobId) {
+        _currentCandidateId = candidateId;
+        _currentJobId = jobId;
+        _currentDecision = null;
+        _currentEmailId = null;
+        document.getElementById('decisionModalSubtitle').textContent =
+            'What is the decision for ' + name + '?';
+        document.getElementById('decisionModal').style.display = 'flex';
+    }
+
+    function closeDecisionModal() {
+        document.getElementById('decisionModal').style.display = 'none';
+    }
+
+    function triggerGenerate(decision) {
+        _currentDecision = decision;
+        closeDecisionModal();
+
+        // Show loading overlay
+        document.getElementById('generatingOverlay').style.display = 'flex';
+
+        fetch('/api/candidate/' + _currentCandidateId + '/generate-review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ decision: decision, job_id: _currentJobId })
+        })
+            .then(async r => {
+                const contentType = r.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    // Server returned HTML error page — extract the text for debugging
+                    const text = await r.text();
+                    throw new Error('Server returned non-JSON response (status ' + r.status + '). Check Flask logs.');
+                }
+                return r.json();
+            })
+            .then(data => {
+                document.getElementById('generatingOverlay').style.display = 'none';
+                if (data.error) {
+                    alert('Failed to generate email:\n' + data.error);
+                    return;
+                }
+                _currentEmailId = data.email_id;
+                openEmailPreviewModal(data.subject, data.body, decision);
+            })
+            .catch(err => {
+                document.getElementById('generatingOverlay').style.display = 'none';
+                alert('Error: ' + err.message);
+                console.error('[generateEmail] Error:', err);
+            });
+    }
+
+    function regenerateEmail() {
+        if (!_currentCandidateId || !_currentDecision) return;
+        const btn = document.getElementById('regenerateBtn');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Regenerating...';
+
+        fetch('/api/candidate/' + _currentCandidateId + '/generate-review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ decision: _currentDecision, job_id: _currentJobId })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) { alert('Failed to regenerate: ' + data.error); return; }
+                _currentEmailId = data.email_id;
+                document.getElementById('previewSubjectInput').value = data.subject;
+                document.getElementById('previewBodyTextarea').value = data.body;
+                document.getElementById('copyConfirmText').style.display = 'none';
+            })
+            .catch(() => alert('Network error'))
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-redo"></i> Regenerate';
+            });
+    }
+
+    function openEmailPreviewModal(subject, body, decision) {
+        document.getElementById('previewSubjectInput').value = subject;
+        document.getElementById('previewBodyTextarea').value = body;
+        document.getElementById('copyConfirmText').style.display = 'none';
+
+        // Decision badge
+        const badge = document.getElementById('previewDecisionBadge');
+        if (decision === 'selected') {
+            badge.textContent = '✅ Selected';
+            badge.className = 'status-pill status-green';
+        } else {
+            badge.textContent = '❌ Rejected';
+            badge.className = 'status-pill status-red';
+        }
+
+        // Load notes snapshot (fetch email history for latest entry)
+        fetch('/api/candidate/' + _currentCandidateId + '/email-history')
+            .then(r => r.json())
+            .then(data => {
+                // The latest email is first in the list
+                // We use the snapshot from the backend stored notes
+                if (data.emails && data.emails.length > 0) {
+                    const notes = 'Notes used to generate this email are stored in the database.\nCheck review_emails table row id: ' + (data.emails[0].id);
+                    document.getElementById('previewNotesSnapshot').textContent = notes;
+                }
+            }).catch(() => { });
+
+        document.getElementById('emailPreviewModal').style.display = 'flex';
+    }
+
+    function closeEmailPreviewModal() {
+        document.getElementById('emailPreviewModal').style.display = 'none';
+    }
+
+    function toggleAccordion() {
+        const content = document.getElementById('accordionContent');
+        const icon = document.getElementById('accordionIcon');
+        const isOpen = content.style.display !== 'none';
+        content.style.display = isOpen ? 'none' : 'block';
+        icon.className = isOpen ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+    }
+
+    function copyEmailToClipboard() {
+        const subject = document.getElementById('previewSubjectInput').value;
+        const body = document.getElementById('previewBodyTextarea').value;
+        const full = 'Subject: ' + subject + '\n\n' + body;
+
+        navigator.clipboard.writeText(full).then(() => {
+            document.getElementById('copyConfirmText').style.display = 'block';
+            document.getElementById('copyBtn').innerHTML = '<i class="fas fa-check"></i> Copied!';
+
+            // Mark as copied in DB
+            if (_currentEmailId) {
+                fetch('/reviews/mark-copied/' + _currentEmailId, { method: 'POST' })
+                    .then(r => r.json())
+                    .catch(() => { });
+            }
+
+            setTimeout(() => {
+                document.getElementById('copyBtn').innerHTML = '<i class="fas fa-copy"></i> Copy to Clipboard';
+            }, 3000);
+        }).catch(() => {
+            // Fallback for older browsers
+            const ta = document.createElement('textarea');
+            ta.value = full; document.body.appendChild(ta);
+            ta.select(); document.execCommand('copy');
+            document.body.removeChild(ta);
+            document.getElementById('copyConfirmText').style.display = 'block';
+        });
+    }
+
+    // Close any modal when clicking its backdrop
+    window.addEventListener('click', function (event) {
+        ['reviewAnalysisModal', 'moveStageModal', 'decisionModal', 'emailPreviewModal'].forEach(id => {
+            const modal = document.getElementById(id);
+            if (event.target === modal) modal.style.display = 'none';
+        });
+    });
+</script>
+{% endblock %}

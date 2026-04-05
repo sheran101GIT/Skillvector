@@ -1,0 +1,732 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dash-header-row">
+        <div>
+            <h1>Uploads & Job Management</h1>
+            <p class="subtitle">Automated resume pipeline from Google Forms and job description management</p>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="sub-tabs" style="margin-top: 2rem;">
+        <button class="sub-tab" style="border:none; cursor:pointer;" onclick="switchTab('api')">API Pipeline</button>
+        <button class="sub-tab active" style="border:none; cursor:pointer;" onclick="switchTab('resumes')"
+            id="resumesTab">Uploaded Resumes</button>
+        <button class="sub-tab" style="border:none; cursor:pointer;" onclick="switchTab('jobs')" id="jobsTab">Job
+            Descriptions</button>
+    </div>
+
+    <!-- Uploaded Resumes Tab Content -->
+    <div id="resumesContent" class="tab-content">
+        <!-- Upload New Resumes Section -->
+        <div class="upload-section-box">
+            <h3 class="upload-section-title">Upload New Resumes</h3>
+            <p class="upload-section-desc">Select PDF or DOC files to upload. Multiple files can be selected at once.
+            </p>
+
+            <form action="{{ url_for('uploads.upload_resumes') }}" method="POST" enctype="multipart/form-data"
+                class="upload-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="upload-form-row">
+                    <div class="job-select-wrapper">
+                        <label class="file-input-label">Job Description</label>
+                        <select name="job_id" class="job-select-dropdown">
+                            <option value="">-- Select Job (Optional) --</option>
+                            {% for job in jobs %}
+                            <option value="{{ job.id }}">{{ job.title }}{% if job.department %} - {{ job.department }}{%
+                                endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="file-input-wrapper">
+                        <label class="file-input-label">Select Resume Files</label>
+                        <div class="file-input-container">
+                            <input type="file" name="resumes" id="resumeFiles" multiple accept=".pdf,.doc,.docx"
+                                class="file-input-hidden">
+                            <label for="resumeFiles" class="file-input-display">
+                                <span class="file-input-text">Choose Files</span>
+                                <span class="file-input-selected" id="selectedFiles">No file chosen</span>
+                            </label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-upload">
+                        <i class="fas fa-cloud-upload-alt"></i> Upload
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="upload-stats-grid">
+            <div class="upload-stat-card">
+                <div class="stat-header">
+                    <span class="stat-label">Total Resumes</span>
+                    <i class="far fa-file-alt stat-icon"></i>
+                </div>
+                <div class="stat-value">{{ stats.total }}</div>
+            </div>
+            <div class="upload-stat-card">
+                <div class="stat-header">
+                    <span class="stat-label">Processed</span>
+                    <i class="fas fa-check-circle stat-icon stat-icon-green"></i>
+                </div>
+                <div class="stat-value">{{ stats.processed }}</div>
+            </div>
+            <div class="upload-stat-card">
+                <div class="stat-header">
+                    <span class="stat-label">Processing</span>
+                    <i class="fas fa-sync stat-icon stat-icon-blue"></i>
+                </div>
+                <div class="stat-value">{{ stats.processing }}</div>
+            </div>
+            <div class="upload-stat-card">
+                <div class="stat-header">
+                    <span class="stat-label">Errors</span>
+                    <i class="fas fa-exclamation-circle stat-icon stat-icon-red"></i>
+                </div>
+                <div class="stat-value">{{ stats.errors }}</div>
+            </div>
+        </div>
+
+        <!-- Uploaded Resumes Table Section -->
+        <div class="resumes-table-section">
+            <div class="resumes-table-header">
+                <div>
+                    <h3>Uploaded Resumes</h3>
+                    <p class="section-subtitle">Manage and review all uploaded candidate resumes</p>
+                </div>
+            </div>
+
+            <table class="resumes-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Candidate</th>
+                        <th>Applied For</th>
+                        <th>Source</th>
+                        <th>Date & Time</th>
+                        <th>Contact</th>
+                        <th>Match Score</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for candidate in candidates %}
+                    <tr>
+                        <td>
+                            <div class="status-indicator-wrapper">
+                                {% if candidate.processing_status == 'completed' %}
+                                <span class="status-dot status-dot-green"></span>
+                                <span class="status-badge status-badge-green">Processed</span>
+                                {% elif candidate.processing_status == 'processing' %}
+                                <span class="status-dot status-dot-blue"></span>
+                                <span class="status-badge status-badge-blue">Processing</span>
+                                {% elif candidate.processing_status == 'failed' %}
+                                <span class="status-dot status-dot-red"></span>
+                                <span class="status-badge status-badge-red">Error</span>
+                                {% else %}
+                                <span class="status-dot status-dot-yellow"></span>
+                                <span class="status-badge status-badge-yellow">Pending</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="candidate-cell">
+                                <span class="candidate-name">{{ candidate.name }}</span>
+                                <span class="candidate-file">{{ candidate.email or 'No email' }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if candidate.job %}
+                            <span class="position-tag-small">{{ candidate.job.title }}</span>
+                            {% else %}
+                            <span class="position-tag-small position-tag-muted">Not assigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="source-badge">Google Forms</span>
+                        </td>
+                        <td>
+                            <div class="datetime-cell">
+                                <span class="date-text">{{ candidate.created_at.strftime('%Y-%m-%d') }}</span>
+                                <span class="time-text">{{ candidate.created_at.strftime('%I:%M %p') }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="contact-cell">
+                                <span class="contact-email">{{ candidate.email or '-' }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if candidate.analysis and candidate.analysis.final_score %}
+                            {% set score = (candidate.analysis.final_score * 100)|int %}
+                            <div
+                                class="score-badge {% if score >= 70 %}score-badge-high{% elif score >= 40 %}score-badge-medium{% else %}score-badge-low{% endif %}">
+                                {{ score }}%
+                            </div>
+                            {% if candidate.skills and candidate.skills|length > 0 %}
+                            <div class="skill-tags-mini">
+                                {% for skill in candidate.skills[:3] %}
+                                <span class="skill-mini-tag">{{ skill }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <span class="score-na">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="actions-cell-compact">
+                                <a href="{{ url_for('candidates.view', candidate_id=candidate.id) }}"
+                                    class="action-btn-icon" title="View">
+                                    <i class="far fa-eye"></i>
+                                </a>
+                                <a href="#" class="action-btn-icon" title="Download">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <form action="{{ url_for('uploads.delete_resume', candidate_id=candidate.id) }}"
+                                    method="POST" style="display:inline;"
+                                    onsubmit="return confirm('Are you sure you want to delete this resume?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="action-btn-icon action-btn-delete" title="Delete">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="empty-table-cell">
+                            <div class="empty-state">
+                                <i class="far fa-folder-open empty-icon"></i>
+                                <p>No resumes uploaded yet. Upload some resumes to get started.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Job Descriptions Tab Content (Hidden by default) -->
+    <div id="jobsContent" class="tab-content" style="display: none;">
+        <div class="jobs-section-box">
+            <div class="jobs-section-header">
+                <div>
+                    <h3>Job Descriptions</h3>
+                    <p class="section-subtitle">Manage job descriptions used for candidate matching and analysis</p>
+                </div>
+                <button onclick="openModal()" class="btn btn-black-small">
+                    <i class="fas fa-plus"></i> Add Job Description
+                </button>
+            </div>
+
+            <div class="job-cards-grid">
+                {% for job in jobs %}
+                <div class="job-card-manage">
+                    <div class="job-card-header">
+                        <h3 class="job-title">{{ job.title }}</h3>
+                        {% if job.is_active %}
+                        <span class="status-pill status-grey">Active</span>
+                        {% else %}
+                        <span class="status-pill status-red">Inactive</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="job-meta">
+                        <i class="far fa-building"></i> {{ job.department or 'Engineering' }}
+                        <span class="sep">•</span>
+                        <i class="fas fa-map-marker-alt"></i> {{ job.location or 'Remote' }}
+                    </div>
+
+                    <div class="job-analytics" style="margin-top:0.5rem; font-size:0.9rem; color:#4b5563;">
+                        <i class="fas fa-users" style="color:#3b82f6;"></i>
+                        <strong>{{ job_analytics.get(job.id, 0) }}</strong> Applications
+                    </div>
+
+                    <div class="job-exp">
+                        <strong>Experience:</strong> {{ job.experience_range or 'Not specified' }}
+                    </div>
+
+                    <div class="job-skills-list">
+                        <strong>Required Skills:</strong>
+                        <div class="skills-row">
+                            {% for skill in job.required_skills[:3] %}
+                            <span class="skill-tag-small">{{ skill }}</span>
+                            {% endfor %}
+                            {% if job.required_skills|length > 3 %}
+                            <span class="skill-tag-small">+{{ job.required_skills|length - 3 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="job-card-actions">
+                        <a href="{{ url_for('jobs.edit', job_id=job.id) }}" class="btn-outline-block"
+                            style="text-align:center; text-decoration:none;">
+                            <i class="far fa-edit"></i> Edit
+                        </a>
+
+                        <form action="{{ url_for('jobs.toggle_status', job_id=job.id) }}" method="POST" style="flex:1">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            {% if job.is_active %}
+                            <button type="submit" class="btn-outline-block"
+                                style="width:100%; color:#d97706; border-color:#fcd34d;">
+                                <i class="fas fa-pause"></i> Pause
+                            </button>
+                            {% else %}
+                            <button type="submit" class="btn-outline-block"
+                                style="width:100%; color:#059669; border-color:#6ee7b7;">
+                                <i class="fas fa-play"></i> Activate
+                            </button>
+                            {% endif %}
+                        </form>
+
+                        <form action="{{ url_for('jobs.delete', job_id=job.id) }}" method="POST" style="flex:1">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-outline-block"
+                                style="width:100%; border-color:#fee2e2; color:#ef4444;"
+                                onclick="return confirm('Delete this job? This action cannot be undone.');">
+                                <i class="far fa-trash-alt"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                    <div style="margin-top:0.5rem; text-align:center;">
+                        <button type="button" onclick="openSaveTemplateModal('{{ job.id }}', '{{ job.title }}')"
+                            style="background:none; border:none; color:#6b7280; cursor:pointer; font-size:0.8rem; text-decoration:underline;">
+                            Save as Template
+                        </button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="no-jobs-box">
+                    <p>No job descriptions added yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- API Pipeline Tab Content (Hidden by default) -->
+    <div id="apiContent" class="tab-content" style="display: none;">
+        <!-- Google Forms API Pipeline Section -->
+        <div class="api-pipeline-box">
+            <h3 class="api-pipeline-title">Google Forms API Pipeline</h3>
+            <p class="api-pipeline-desc">Automated resume collection and processing from Google Forms submissions</p>
+
+            <!-- API Status Cards -->
+            <div class="api-stats-grid">
+                <div class="api-stat-card">
+                    <span class="api-stat-label">API Status</span>
+                    <div class="api-status-indicator">
+                        <span class="status-dot-large status-dot-green"></span>
+                        <span class="api-status-text">Active & Connected</span>
+                    </div>
+                </div>
+                <div class="api-stat-card">
+                    <span class="api-stat-label">Forms Monitored</span>
+                    <div class="api-stat-value">{{ google_forms|length if google_forms else 0 }}</div>
+                    <span class="api-stat-sub">Active job forms</span>
+                </div>
+                <div class="api-stat-card">
+                    <span class="api-stat-label">Today's Submissions</span>
+                    <div class="api-stat-value">{{ api_stats.today_submissions if api_stats else 0 }}</div>
+                    <span class="api-stat-sub api-stat-positive">+{{ api_stats.yesterday_diff if api_stats else 0 }}
+                        from yesterday</span>
+                </div>
+            </div>
+
+            <!-- Connected Google Forms -->
+            <div class="connected-forms-section">
+                <h4 class="connected-forms-title">Connected Google Forms</h4>
+
+                <div class="connected-forms-list">
+                    {% for form in google_forms %}
+                    <div class="connected-form-item">
+                        <div class="form-icon">
+                            <i class="fab fa-google-drive"></i>
+                        </div>
+                        <div class="form-details">
+                            <span class="form-name">{{ form.form_title }}</span>
+                            <span class="form-meta">Linked to: {{ form.job.title }} • Created: {{
+                                form.created_at.strftime('%Y-%m-%d') }}</span>
+                        </div>
+                        <div class="form-actions">
+                            <span class="sync-badge sync-active">
+                                <i class="fas fa-check-circle"></i> Active
+                            </span>
+                            <form action="{{ url_for('uploads.disconnect_form', connection_id=form.id) }}" method="POST"
+                                onsubmit="return confirm('Disconnect this Google Form?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-configure"
+                                    style="border-color:#fee2e2; color:#ef4444;">
+                                    <i class="fas fa-trash-alt"></i> Disconnect
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="no-forms-message">
+                        <i class="fas fa-link"></i>
+                        <p>No forms connected yet. Add a job description first, then connect a Google Form.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Add New Form Button -->
+                <div class="add-form-section">
+                    <button class="btn-add-form" onclick="openAddFormModal()">
+                        <i class="fas fa-plus"></i> Connect New Google Form
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configure Form Modal -->
+        <div id="configureFormModal" class="modal-backdrop">
+            <div class="modal-content-large">
+                <div class="modal-header">
+                    <h2>Configure Google Form Connection</h2>
+                    <button class="close-btn" onclick="closeConfigureModal()"><i class="fas fa-times"></i></button>
+                </div>
+                <p class="modal-subtitle">Configure how submissions from this form are processed</p>
+
+                <form id="configureForm">
+                    <div class="form-group">
+                        <label>Sync Frequency</label>
+                        <select class="form-input">
+                            <option value="realtime">Real-time (Webhook)</option>
+                            <option value="5min" selected>Every 5 minutes</option>
+                            <option value="15min">Every 15 minutes</option>
+                            <option value="hourly">Hourly</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Field Mapping</label>
+                        <div class="field-mapping-grid">
+                            <div class="field-map-row">
+                                <span class="field-map-label">Name Field:</span>
+                                <select class="form-input-small">
+                                    <option>Full Name</option>
+                                    <option>Candidate Name</option>
+                                </select>
+                            </div>
+                            <div class="field-map-row">
+                                <span class="field-map-label">Email Field:</span>
+                                <select class="form-input-small">
+                                    <option>Email Address</option>
+                                    <option>Contact Email</option>
+                                </select>
+                            </div>
+                            <div class="field-map-row">
+                                <span class="field-map-label">Resume Field:</span>
+                                <select class="form-input-small">
+                                    <option>Upload Resume</option>
+                                    <option>Resume File</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> Auto-process new submissions
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> Store resumes in database (not Google Drive)
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox"> Send confirmation email to applicants
+                        </label>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-outline-action" onclick="closeConfigureModal()">Cancel</button>
+                        <button type="submit" class="btn-black-block" style="width:auto; margin-top:0;">Save
+                            Configuration</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add Form Modal -->
+        <div id="addFormModal" class="modal-backdrop">
+            <div class="modal-content-large">
+                <div class="modal-header">
+                    <h2>Connect Google Form</h2>
+                    <button class="close-btn" onclick="closeAddFormModal()"><i class="fas fa-times"></i></button>
+                </div>
+                <p class="modal-subtitle">Connect a Google Form to automatically receive candidate applications</p>
+
+                <form action="{{ url_for('uploads.connect_form') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label>Select Job Description</label>
+                        <select name="job_id" class="form-input" required>
+                            <option value="">-- Select Job --</option>
+                            {% for job in jobs %}
+                            <option value="{{ job.id }}">{{ job.title }}{% if job.department %} - {{ job.department }}{%
+                                endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Google Form URL or ID</label>
+                        <input type="text" name="form_url" class="form-input"
+                            placeholder="https://docs.google.com/forms/d/e/FORM_ID/viewform" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Form Title (Display Name)</label>
+                        <input type="text" name="form_title" class="form-input"
+                            placeholder="e.g. Frontend Developer - Application Form">
+                    </div>
+
+                    <div class="api-info-box">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <strong>Important:</strong> Resumes uploaded through connected forms will be stored directly
+                            in our database, not in Google Drive. Make sure your form has a File Upload field for resume
+                            collection.
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-black-block">Connect Form</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Job Modal -->
+    <div id="createJobModal" class="modal-backdrop">
+        <div class="modal-content-large">
+            <div class="modal-header">
+                <h2>Create New Job Description</h2>
+                <button class="close-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <p class="modal-subtitle">Add a new job description to match against candidate resumes</p>
+
+            <div class="form-group" style="background:#f9fafb; padding:1rem; border-radius:8px; margin-bottom:1.5rem;">
+                <label style="font-size:0.85rem; color:#4b5563;">Start from a template (Optional)</label>
+                <select id="templateSelect" class="form-input" onchange="loadTemplate(this.value)">
+                    <option value="">-- Select a Template --</option>
+                    {% for t in templates %}
+                    <option value="{{ t.id }}">{{ t.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <form action="{{ url_for('jobs.create') }}" method="POST" id="createJobForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label>Job Title <span style="color: red;">*</span></label>
+                        <input type="text" name="title" class="form-input" placeholder="e.g. Frontend Developer"
+                            required minlength="3" maxlength="128">
+                    </div>
+                    <div class="form-group">
+                        <label>Department</label>
+                        <input type="text" name="department" class="form-input" placeholder="e.g. Engineering"
+                            maxlength="128">
+                    </div>
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label>Location</label>
+                        <input type="text" name="location" class="form-input"
+                            placeholder="e.g. Remote, San Francisco, CA" maxlength="128">
+                    </div>
+                    <div class="form-group">
+                        <label>Experience Required</label>
+                        <input type="text" name="experience_range" class="form-input" placeholder="e.g. 3-5 years"
+                            maxlength="64">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Required Skills (comma-separated) <span style="color: red;">*</span></label>
+                    <input type="text" name="required_skills" class="form-input"
+                        placeholder="e.g. React, TypeScript, CSS, JavaScript" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Preferred Skills (comma-separated)</label>
+                    <input type="text" name="preferred_skills" class="form-input"
+                        placeholder="e.g. Redux, Next.js, Tailwind CSS">
+                </div>
+
+                <div class="form-group">
+                    <label>Job Description <span style="color: red;">*</span></label>
+                    <textarea name="description" class="form-input" rows="5" placeholder="Detailed job description..."
+                        required minlength="20"></textarea>
+                </div>
+
+                <button type="submit" class="btn-black-block">Create Job Description</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Save Template Modal -->
+<div id="saveTemplateModal" class="modal-backdrop">
+    <div class="modal-content-small"> <!-- Using small variant style -->
+        <div class="modal-header">
+            <h2>Save as Template</h2>
+            <button class="close-btn" onclick="closeSaveTemplateModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <p class="modal-subtitle">Save this job description for future use</p>
+
+        <form action="{{ url_for('jobs.create_template') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="source_job_id" id="templateSourceJobId">
+
+            <div class="form-group">
+                <label>Template Name</label>
+                <input type="text" name="template_title" id="templateTitleInput" class="form-input" required
+                    placeholder="e.g. Standard Senior Dev">
+            </div>
+
+            <button type="submit" class="btn-black-block">Save Template</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Tab switching
+    function switchTab(tab) {
+        // Hide all content
+        document.getElementById('resumesContent').style.display = 'none';
+        document.getElementById('jobsContent').style.display = 'none';
+        document.getElementById('apiContent').style.display = 'none';
+
+        // Remove active from all tabs
+        document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+
+        // Show selected content and activate tab
+        if (tab === 'resumes') {
+            document.getElementById('resumesContent').style.display = 'block';
+            document.getElementById('resumesTab').classList.add('active');
+        } else if (tab === 'jobs') {
+            document.getElementById('jobsContent').style.display = 'block';
+            document.getElementById('jobsTab').classList.add('active');
+        } else if (tab === 'api') {
+            document.getElementById('apiContent').style.display = 'block';
+            document.querySelector('.sub-tab:first-child').classList.add('active');
+        }
+    }
+
+    // File input display
+    document.getElementById('resumeFiles').addEventListener('change', function (e) {
+        const files = e.target.files;
+        const displayEl = document.getElementById('selectedFiles');
+        if (files.length === 0) {
+            displayEl.textContent = 'No file chosen';
+        } else if (files.length === 1) {
+            displayEl.textContent = files[0].name;
+        } else {
+            displayEl.textContent = files.length + ' files selected';
+        }
+    });
+
+    function openModal() {
+        document.getElementById('createJobModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('createJobModal').style.display = 'none';
+    }
+
+    // API Pipeline Modal Functions
+    function openConfigureModal(formId) {
+        document.getElementById('configureFormModal').style.display = 'flex';
+    }
+
+    function closeConfigureModal() {
+        document.getElementById('configureFormModal').style.display = 'none';
+    }
+
+    function openAddFormModal() {
+        document.getElementById('addFormModal').style.display = 'flex';
+    }
+
+    function closeAddFormModal() {
+        document.getElementById('addFormModal').style.display = 'none';
+    }
+
+    // Import Modal
+    function openImportModal() {
+        document.getElementById('importJobsModal').style.display = 'flex';
+    }
+
+    function closeImportModal() {
+        document.getElementById('importJobsModal').style.display = 'none';
+    }
+
+    // Save Template Modal
+    function openSaveTemplateModal(jobId, jobTitle) {
+        document.getElementById('templateSourceJobId').value = jobId;
+        document.getElementById('templateTitleInput').value = jobTitle + ' Template';
+        document.getElementById('saveTemplateModal').style.display = 'flex';
+    }
+
+    function closeSaveTemplateModal() {
+        document.getElementById('saveTemplateModal').style.display = 'none';
+    }
+
+    // Load Template Data
+    function loadTemplate(templateId) {
+        if (!templateId) return;
+
+        fetch(`/jobs/templates/${templateId}/use`)
+            .then(response => response.json())
+            .then(data => {
+                // Populate form fields
+                if (data.title) document.querySelector('input[name="title"]').value = data.title;
+                if (data.department) document.querySelector('input[name="department"]').value = data.department;
+                if (data.experience_range) document.querySelector('input[name="experience_range"]').value = data.experience_range;
+                if (data.required_skills) document.querySelector('input[name="required_skills"]').value = data.required_skills;
+                if (data.description) document.querySelector('textarea[name="description"]').value = data.description;
+            })
+            .catch(error => console.error('Error loading template:', error));
+    }
+
+    // Close on click outside
+    window.onclick = function (event) {
+        var modals = ['createJobModal', 'configureFormModal', 'addFormModal'];
+        modals.forEach(function (modalId) {
+            var modal = document.getElementById(modalId);
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        });
+    }
+
+    // Reset form when closing modal
+    function closeModal() {
+        document.getElementById('createJobModal').style.display = 'none';
+        document.getElementById('createJobForm').reset();
+    }
+
+    // Auto-hide flash messages after 5 seconds
+    document.addEventListener('DOMContentLoaded', function () {
+        setTimeout(function () {
+            var flashes = document.querySelectorAll('.flash');
+            flashes.forEach(function (flash) {
+                flash.style.transition = 'opacity 0.3s';
+                flash.style.opacity = '0';
+                setTimeout(function () {
+                    flash.remove();
+                }, 300);
+            });
+        }, 5000);
+    });
+</script>
+{% endblock %}

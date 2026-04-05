@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Create New Job</h1>
+<form method="POST" class="job-form">
+    <div class="form-group">
+        <label for="title">Job Title</label>
+        <input type="text" id="title" name="title" required>
+    </div>
+    <div class="form-group">
+        <label for="required_skills">Required Skills (comma separated)</label>
+        <input type="text" id="required_skills" name="required_skills" placeholder="Python, SQL, AWS, React">
+    </div>
+    <div class="form-group">
+        <label for="description">Job Description</label>
+        <textarea id="description" name="description" rows="10" required
+            placeholder="Paste the full job description here..."></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Create Job</button>
+</form>
+{% endblock %}

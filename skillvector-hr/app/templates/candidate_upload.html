@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Upload Candidate for {{ job.title }}</h1>
+<form method="POST" enctype="multipart/form-data" class="upload-form">
+    <div class="form-group">
+        <label for="name">Candidate Name</label>
+        <input type="text" id="name" name="name" required>
+    </div>
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email">
+    </div>
+    <div class="form-group">
+        <label for="github_url">GitHub URL</label>
+        <input type="url" id="github_url" name="github_url">
+    </div>
+    <div class="form-group">
+        <label for="linkedin_url">LinkedIn URL</label>
+        <input type="url" id="linkedin_url" name="linkedin_url">
+    </div>
+    <div class="form-group">
+        <label for="resume">Resume (PDF)</label>
+        <input type="file" id="resume" name="resume" accept=".pdf" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Upload & Analyze</button>
+</form>
+{% endblock %}
