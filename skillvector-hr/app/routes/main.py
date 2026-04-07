@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, redirect, url_for
 from flask_login import login_required, current_user
 from ..models import Job, Candidate
 from sqlalchemy import func
@@ -6,6 +6,12 @@ from sqlalchemy import func
 bp = Blueprint('main', __name__)
 
 @bp.route('/')
+def index():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.dashboard'))
+    return render_template('landing.html')
+
+@bp.route('/dashboard')
 @login_required
 def dashboard():
     jobs = Job.query.filter_by(recruiter_id=current_user.id).all()

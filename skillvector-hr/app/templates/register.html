@@ -1,65 +1,283 @@
-{% extends "layout.html" %}
+<!DOCTYPE html>
+<html lang="en">
 
-{% block navbar %}{% endblock %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - SkillVector HR</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
 
-{% block content %}
-<div class="auth-page-wrapper">
-    <div class="auth-header-logo">
-        <h1>Skillvector</h1>
-        <p>Talent Management System</p>
-    </div>
+    <style>
+        :root {
+            /* White Theme Palette */
+            --bg-color: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.3);
+            --input-bg: rgba(255, 255, 255, 0.8);
+        }
 
-    <div class="auth-card">
-        <div class="auth-card-header">
-            <h2>Create Account</h2>
-            <p>Join the future of HR management</p>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: auto; /* Allow scrolling if screen is too small */
+            position: relative;
+        }
+
+        /* Animated Background (Pastel Blobs) */
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.5;
+            animation: float 10s infinite ease-in-out;
+            z-index: -1;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: #dbeafe; /* Pastel Blue */
+            top: -50px;
+            left: -100px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 300px;
+            height: 300px;
+            background: #e0f2fe; /* Pastel Cyan */
+            bottom: -50px;
+            right: -50px;
+            animation-delay: -5s;
+        }
+
+        .orb-3 {
+            width: 200px;
+            height: 200px;
+            background: #fce7f3; /* Pastel Pink */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.6;
+            animation: pulse 8s infinite alternate;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(5deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+            100% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+        }
+
+        /* Login Card */
+        .login-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            padding: 3rem;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            max-height: 95vh;
+            overflow-y: auto;
+            margin: 2rem 0;
+        }
+
+        .login-card::-webkit-scrollbar {
+            width: 4px;
+        }
+        .login-card::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+
+        .login-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.15);
+        }
+
+        .logo-container img {
+            max-width: 200px;
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            font-family: inherit;
+            outline: none;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+            background: #ffffff;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-submit:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+        }
+
+        .alert {
+            padding: 0.75rem;
+            margin-bottom: 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        .footer-links {
+            margin-top: 2rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .footer-links a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            margin-left: 0.25rem;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Animated Background -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+
+    <div class="login-card">
+        <div class="logo-container">
+            <a href="{{ url_for('main.index') }}">
+                <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="SkillVector">
+            </a>
         </div>
 
-        <form method="POST" action="{{ url_for('auth.register') }}" class="auth-form">
+        <p class="subtitle">Join the future of HR management.</p>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-error">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.register') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="name">Full Name</label>
-                <div class="input-with-icon">
-                    <span class="icon"><i class="fas fa-user"></i></span>
-                    <input type="text" name="name" placeholder="John Doe">
-                </div>
+                <input type="text" name="name" id="name" placeholder="John Doe">
             </div>
 
             <div class="form-group">
                 <label for="username">Username</label>
-                <div class="input-with-icon">
-                    <span class="icon"><i class="fas fa-id-badge"></i></span>
-                    <input type="text" name="username" required placeholder="jdoe">
-                </div>
+                <input type="text" name="username" id="username" required placeholder="jdoe">
             </div>
 
             <div class="form-group">
-                <label for="email">Email Address</label>
-                <div class="input-with-icon">
-                    <span class="icon"><i class="fas fa-envelope"></i></span>
-                    <input type="email" name="email" required placeholder="john@example.com">
-                </div>
+                <label for="email">Email</label>
+                <input type="email" name="email" id="email" required placeholder="name@company.com">
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <div class="input-with-icon">
-                    <span class="icon"><i class="fas fa-lock"></i></span>
-                    <input type="password" name="password" required placeholder="Create a strong password">
-                </div>
+                <input type="password" name="password" id="password" required placeholder="••••••••">
             </div>
 
-            <button type="submit" class="btn btn-dark btn-block">Register</button>
+            <button type="submit" class="btn-submit">Register</button>
         </form>
 
-        <div class="auth-footer-links">
-            <p>Already have an account? <a href="{{ url_for('auth.login') }}">Login here</a></p>
+        <div class="footer-links">
+            <span>Already have an account?</span>
+            <a href="{{ url_for('auth.login') }}">Log in</a>
         </div>
     </div>
 
-    <div class="auth-page-footer">
-        <p>Secure HR Management Platform</p>
-        <p>&copy; 2024 SkillVector. All rights reserved.</p>
-    </div>
-</div>
-{% endblock %}
+</body>
+
+</html>

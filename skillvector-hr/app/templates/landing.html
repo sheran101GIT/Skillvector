@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillVector | Smart Hiring, Simplified</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="SkillVector">
+            </div>
+            <div class="nav-links">
+            </div>
+            <div class="nav-auth">
+                <a href="{{ url_for('auth.login') }}" class="btn-signin">Sign In</a>
+                <a href="{{ url_for('auth.register') }}" class="btn-get-started">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <div class="hero-tag"><i class="fas fa-bolt"></i> AI-Powered Recruitment</div>
+                <h1 class="hero-title">Smart Hiring,<br><span class="text-gradient">Simplified</span></h1>
+                <p class="hero-desc">Transform your recruitment process with AI-powered automation. Find, assess, and hire top talent faster than ever before.</p>
+                <div class="hero-actions">
+                    <a href="{{ url_for('auth.register') }}" class="btn-primary-large">Start Hiring Now</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="visual-wrapper">
+                    <!-- Base backplate representing the UI screenshot -->
+                    <div class="visual-main-card img-card">
+                       <img src="{{ url_for('static', filename='img/app-glimpse.png') }}" alt="SkillVector App Interface" class="app-glimpse-img">
+                    </div>
+                    <!-- Overlapping Badges as in the design -->
+                    <div class="visual-badge badge-top">
+                        <div class="icon-circle icon-pink"><i class="fas fa-bullseye"></i></div>
+                        <div>
+                            <h4>95%</h4>
+                            <p>Match Accuracy</p>
+                        </div>
+                    </div>
+                    <div class="visual-badge badge-bottom">
+                        <div class="icon-circle icon-purple"><i class="fas fa-brain"></i></div>
+                        <div>
+                            <h4>AI</h4>
+                            <p>Recommendations</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container text-center">
+            <h2 class="section-title">Everything you need to hire smarter</h2>
+            <p class="section-subtitle">Powered by advanced AI to streamline every step of your recruitment process</p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon bg-purple-light"><i class="fas fa-brain text-purple"></i></div>
+                    <h3>AI-Powered Matching</h3>
+                    <p>Our intelligent algorithms analyze resumes and match candidates with open positions based on skills, experience, and cultural fit.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon bg-purple-light"><i class="fas fa-user-check text-purple"></i></div>
+                    <h3>Automated Screening</h3>
+                    <p>Save hours with automated resume screening and candidate qualification. Focus on the best talent, not paperwork.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon bg-purple-light"><i class="fas fa-chart-pie text-purple"></i></div>
+                    <h3>Smart Analytics</h3>
+                    <p>Track key recruitment metrics, identify bottlenecks, and optimize your hiring process with data-driven insights.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-box">
+                <h2>Ready to transform your hiring?</h2>
+                <p>Join thousands of companies already using SkillVector to build exceptional teams</p>
+                <a href="{{ url_for('auth.register') }}" class="btn-white">Get Started for Free &nbsp;&rarr;</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-content">
+            <div class="footer-logo">
+                <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="SkillVector">
+            </div>
+            <div class="footer-links">
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+                <a href="#">Contact</a>
+            </div>
+            <div class="footer-copyright">
+                &copy; 2026 SkillVector. All rights reserved.
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
