@@ -135,12 +135,17 @@
                     </td>
                     <td style="text-align:right">
                         <div class="actions-cell">
-                            <button class="btn-icon" onclick="openReviewModal({{ candidate.id }})">
+                            <button class="btn-icon" 
+                                data-id="{{ candidate.id }}" 
+                                onclick="openReviewModal(this.dataset.id)">
                                 <i class="far fa-eye"></i> View
                             </button>
                             <!-- Generate Email button -->
                             <button class="btn btn-black-small"
-                                onclick="openDecisionModal({{ candidate.id }}, '{{ candidate.name }}', {{ candidate.job_id or 'null' }})">
+                                data-id="{{ candidate.id }}"
+                                data-name="{{ candidate.name }}"
+                                data-jobid="{{ candidate.job_id or 'null' }}"
+                                onclick="openDecisionModal(this.dataset.id, this.dataset.name, this.dataset.jobid === 'null' ? null : this.dataset.jobid)">
                                 <i class="fas fa-magic"></i> Generate Email
                             </button>
                         </div>

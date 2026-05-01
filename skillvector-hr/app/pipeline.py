@@ -333,28 +333,9 @@ def match_skills(candidate_skills, job_skills, resume_text=None):
 
 def generate_embedding(text):
     """
-    Generates 384-dim embedding using Google Gemini, OpenAI, or Groq.
+    Generates 384-dim embedding using Google Gemini or OpenAI.
     """
-    # 1. Try Groq
-    groq_key = os.environ.get("GROQ_API_KEY")
-    if groq_key:
-        try:
-             from groq import Groq
-             client = Groq(api_key=groq_key)
-             completion = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[
-                    {"role": "system", "content": "You are an expert HR consultant. Output JSON only."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.6,
-                response_format={"type": "json_object"}
-            )
-             return json.loads(completion.choices[0].message.content)
-        except Exception as e:
-             print(f"Groq Phrasing Failed: {e}")
-
-    # 2. Try Google Gemini
+    # 1. Try Google Gemini
     google_key = os.environ.get("GOOGLE_API_KEY")
     if google_key:
         try:
