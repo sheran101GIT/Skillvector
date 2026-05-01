@@ -35,7 +35,11 @@ def upgrade():
     sa.ForeignKeyConstraint(['job_id'], ['jobs.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.drop_table('google_form_configs')
+    # Only drop if exists — table may not exist on fresh deployments (e.g., Render)
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    if 'google_form_configs' in inspector.get_table_names():
+        op.drop_table('google_form_configs')
     # ### end Alembic commands ###
 
 
