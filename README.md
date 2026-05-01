@@ -1,9 +1,12 @@
 <div align="center">
+  <img src="skillvector-hr/app/static/img/logo.svg" alt="SkillVector Logo" width="250"/>
   <h1>🚀 SkillVector</h1>
   <p><b>An AI-Powered Applicant Tracking & Resume Screening System for Modern HR Teams</b></p>
   
   <a href="https://skillvector-app.onrender.com"><strong>Check out the Live Demo</strong></a>
   <br>
+  <br>
+  <img src="skillvector-hr/app/static/img/app-glimpse.png" alt="SkillVector App Glimpse" width="800" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"/>
 </div>
 
 <hr>
