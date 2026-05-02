@@ -90,74 +90,76 @@
         </div>
 
         <!-- Table -->
-        <table class="candidate-table">
-            <thead>
-                <tr>
-                    <th width="20%">Candidate</th>
-                    <th width="20%">Applied For</th>
-                    <th width="15%">Current Stage</th>
-                    <th width="15%">Applied Date</th>
-                    <th width="15%">Review Status</th>
-                    <th width="15%" style="text-align:right">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for candidate in candidates %}
-                <tr>
-                    <td>
-                        <div class="cand-cell-profile">
-                            <div class="table-avatar">{{ candidate.name[:2].upper() }}</div>
-                            <div class="cand-cell-info">
-                                <div class="name">{{ candidate.name }}</div>
-                                <div class="id">{{ candidate.email }}</div>
+        <div class="table-scroll">
+            <table class="candidate-table">
+                <thead>
+                    <tr>
+                        <th width="20%">Candidate</th>
+                        <th width="20%">Applied For</th>
+                        <th width="15%">Current Stage</th>
+                        <th width="15%">Applied Date</th>
+                        <th width="15%">Review Status</th>
+                        <th width="15%" style="text-align:right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for candidate in candidates %}
+                    <tr>
+                        <td>
+                            <div class="cand-cell-profile">
+                                <div class="table-avatar">{{ candidate.name[:2].upper() }}</div>
+                                <div class="cand-cell-info">
+                                    <div class="name">{{ candidate.name }}</div>
+                                    <div class="id">{{ candidate.email }}</div>
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="position-tag">
-                            {{ candidate.job.title }}
-                        </div>
-                    </td>
-                    <td>
-                        <!-- Using processing_status as stage proxy -->
-                        {% set stage_color = 'bg-dark' %}
-                        {% if candidate.processing_status == 'completed' %} {% set stage_color = 'bg-blue' %} {% endif
-                        %}
-                        <span class="stage-pill {{ stage_color }}">{{ candidate.processing_status|capitalize }}</span>
-                    </td>
-                    <td>{{ candidate.created_at.strftime('%Y-%m-%d') }}</td>
-                    <td>
-                        {% if candidate.review_status == 'pending' %}
-                        <span class="status-pill status-orange"><i class="far fa-clock"></i> Pending</span>
-                        {% else %}
-                        <span class="status-pill status-green"><i class="fas fa-check"></i> Sent</span>
-                        {% endif %}
-                    </td>
-                    <td style="text-align:right">
-                        <div class="actions-cell">
-                            <button class="btn-icon" 
-                                data-id="{{ candidate.id }}" 
-                                onclick="openReviewModal(this.dataset.id)">
-                                <i class="far fa-eye"></i> View
-                            </button>
-                            <!-- Generate Email button -->
-                            <button class="btn btn-black-small"
-                                data-id="{{ candidate.id }}"
-                                data-name="{{ candidate.name }}"
-                                data-jobid="{{ candidate.job_id or 'null' }}"
-                                onclick="openDecisionModal(this.dataset.id, this.dataset.name, this.dataset.jobid === 'null' ? null : this.dataset.jobid)">
-                                <i class="fas fa-magic"></i> Generate Email
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" style="text-align:center; padding: 2rem;">No candidates found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        </td>
+                        <td>
+                            <div class="position-tag">
+                                {{ candidate.job.title }}
+                            </div>
+                        </td>
+                        <td>
+                            <!-- Using processing_status as stage proxy -->
+                            {% set stage_color = 'bg-dark' %}
+                            {% if candidate.processing_status == 'completed' %} {% set stage_color = 'bg-blue' %} {% endif
+                            %}
+                            <span class="stage-pill {{ stage_color }}">{{ candidate.processing_status|capitalize }}</span>
+                        </td>
+                        <td>{{ candidate.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            {% if candidate.review_status == 'pending' %}
+                            <span class="status-pill status-orange"><i class="far fa-clock"></i> Pending</span>
+                            {% else %}
+                            <span class="status-pill status-green"><i class="fas fa-check"></i> Sent</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align:right">
+                            <div class="actions-cell">
+                                <button class="btn-icon" 
+                                    data-id="{{ candidate.id }}" 
+                                    onclick="openReviewModal(this.dataset.id)">
+                                    <i class="far fa-eye"></i> View
+                                </button>
+                                <!-- Generate Email button -->
+                                <button class="btn btn-black-small"
+                                    data-id="{{ candidate.id }}"
+                                    data-name="{{ candidate.name }}"
+                                    data-jobid="{{ candidate.job_id or 'null' }}"
+                                    onclick="openDecisionModal(this.dataset.id, this.dataset.name, this.dataset.jobid === 'null' ? null : this.dataset.jobid)">
+                                    <i class="fas fa-magic"></i> Generate Email
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding: 2rem;">No candidates found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
     </div>
 </div>

@@ -5047,15 +5047,12 @@ body {
         flex-wrap: wrap;
     }
 
-    /* ── Tables: make them horizontally scrollable ── */
-    .resumes-table,
-    .candidates-table,
-    .reviews-table,
+    /* ── Tables: adjust inner spacing on mobile if needed, but DO NOT use display:block ── */
+    table th, table td {
+        padding: 0.75rem 0.5rem;
+    }
     table {
-        display: block;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        white-space: nowrap;
+        white-space: nowrap; /* Keep content from wrapping wildly on mobile */
     }
 
     /* ── Reduce font sizes ── */
