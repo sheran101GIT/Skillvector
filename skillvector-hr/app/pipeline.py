@@ -333,23 +333,26 @@ def match_skills(candidate_skills, job_skills, resume_text=None):
 
 def generate_embedding(text):
     """
-    Generates 384-dim embedding using Google Gemini or OpenAI.
+    Generates 384-dim embedding using Google Gemini (new SDK) or OpenAI.
     """
-    # 1. Try Google Gemini
+    # 1. Try Google Gemini (new google-genai SDK)
     google_key = os.environ.get("GOOGLE_API_KEY")
     if google_key:
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=google_key)
-            
-            # Using text-embedding-004 with dimensionality reduction
-            result = genai.embed_content(
-                model="models/text-embedding-004",
-                content=text[:9000], # Gemini has large context
-                task_type="retrieval_document",
-                output_dimensionality=384
+            from google import genai as google_genai
+            client = google_genai.Client(api_key=google_key)
+            result = client.models.embed_content(
+                model="gemini-embedding-004",
+                contents=text[:9000],
             )
-            return result['embedding']
+            embedding = result.embeddings[0].values
+            # Reduce to 384 dims if needed (model returns 3072)
+            if len(embedding) > 384:
+                import numpy as np
+                arr = np.array(embedding[:384])
+                norm = np.linalg.norm(arr)
+                embedding = (arr / norm if norm > 0 else arr).tolist()
+            return embedding
         except Exception as e:
             print(f"Gemini Embedding Failed: {e}", flush=True)
 
@@ -374,6 +377,7 @@ def generate_embedding(text):
     # 3. Fallback / Mock
     print("LOG: Using Mock Embedding", flush=True)
     return [0.0] * 384
+
 
 # --- Scoring & Phrasing ---
 
