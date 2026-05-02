@@ -15,9 +15,16 @@
 </head>
 
 <body>
+    <!-- Mobile Sidebar Overlay -->
+    <div id="mobileOverlay" class="mobile-overlay" onclick="closeSidebar()"></div>
+
     <div class="app-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
+            <!-- Mobile close button -->
+            <button class="sidebar-close-btn" onclick="closeSidebar()" aria-label="Close menu">
+                <i class="fas fa-times"></i>
+            </button>
             <div class="logo-area">
                 <a href="{{ url_for('main.dashboard') }}">
                     <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="SkillVector">
@@ -50,8 +57,13 @@
         <main class="main-wrapper">
             {% if current_user.is_authenticated %}
             <header class="top-header">
+                <!-- Hamburger button (mobile only) -->
+                <button class="hamburger-btn" onclick="openSidebar()" aria-label="Open menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+
                 <div class="user-profile" onclick="toggleProfileMenu()" style="cursor: pointer; position: relative;">
-                    <div class="user-info">
+                    <div class="user-info user-info-desktop">
                         <div class="user-name">{{ current_user.name or current_user.username }}</div>
                         <div class="user-role">{{ current_user.role|capitalize }}</div>
                     </div>
@@ -141,6 +153,25 @@
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
+        /* ── Sidebar (mobile) ── */
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('open');
+            document.getElementById('mobileOverlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('mobileOverlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        // Close sidebar when a nav link is clicked on mobile
+        document.querySelectorAll('.nav-item').forEach(function(link) {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 768) closeSidebar();
+            });
+        });
+
+        /* ── Profile dropdown ── */
         function toggleProfileMenu() {
             var dropdown = document.getElementById('profileDropdown');
             if (dropdown.style.display === 'block') {
