@@ -48,7 +48,8 @@ def process_candidate_background(candidate_id, job_id, upload_request_context_ap
         candidate.experience_years = experience_years
         
         # --- 2.5 Extract Detailed Info (New) ---
-        details = extract_candidate_details(clean_text)
+        # Use RAW text (not preprocessed/lowercased) so the LLM can read proper-case names
+        details = extract_candidate_details(candidate.resume_text)
         
         if 'error' in details:
             logger.warning(f"Candidate details extraction failed: {details['error']}")
