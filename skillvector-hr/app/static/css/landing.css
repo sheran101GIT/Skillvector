@@ -504,6 +504,10 @@ a {
     .hero-content {
         margin-bottom: 3rem;
     }
+
+    .hero-visual {
+        width: 100%;
+    }
     
     .visual-wrapper {
         width: 100%;
