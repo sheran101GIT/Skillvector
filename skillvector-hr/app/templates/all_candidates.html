@@ -81,15 +81,15 @@
                 candidates found</span></h3>
 
         <div class="table-scroll">
-            <table class="candidate-table">
+            <table class="resumes-table">
                 <thead>
                     <tr>
-                        <th width="25%">Candidate</th>
-                        <th width="25%">Contact</th>
-                        <th width="20%">Position</th>
-                        <th width="10%">Applied Date</th>
-                        <th width="10%">Status</th>
-                        <th width="10%" style="text-align:right">Actions</th>
+                        <th>Status</th>
+                        <th>Candidate</th>
+                        <th>Position</th>
+                        <th>Contact</th>
+                        <th>Applied Date</th>
+                        <th style="text-align:right">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="candidatesTableBody">
@@ -100,46 +100,50 @@
                         data-stage="{{ candidate.current_stage or 'applied' }}" data-job-id="{{ candidate.job_id or '' }}"
                         data-status="{{ candidate.processing_status }}">
                         <td>
-                            <div class="cand-cell-profile">
-                                <!-- Using initials or placeholder avatar -->
-                                <div class="table-avatar">{{ candidate.name[:2].upper() }}</div>
-                                <div class="cand-cell-info">
-                                    <div class="name">{{ candidate.name }}</div>
-                                    <div class="id">ID: {{ candidate.id }}</div>
-                                </div>
+                            <div class="status-indicator-wrapper">
+                                {% if candidate.processing_status == 'completed' %}
+                                <span class="status-dot status-dot-green"></span>
+                                <span class="status-badge status-badge-green">Completed</span>
+                                {% elif candidate.processing_status == 'failed' %}
+                                <span class="status-dot status-dot-red"></span>
+                                <span class="status-badge status-badge-red">Failed</span>
+                                {% else %}
+                                <span class="status-dot status-dot-yellow"></span>
+                                <span class="status-badge status-badge-yellow">Processing</span>
+                                {% endif %}
                             </div>
                         </td>
                         <td>
-                            <div class="contact-info">
-                                <div><i class="far fa-envelope"></i> {{ candidate.email }}</div>
-                                <!-- Placeholder phone if not in DB -->
-                                <div><i class="fas fa-phone-alt"></i> {{ candidate.phone or '+1 (555) 000-0000' }}</div>
+                            <div class="candidate-cell">
+                                <span class="candidate-name">{{ candidate.name }}</span>
+                                <span class="candidate-file">ID: {{ candidate.id }}</span>
                             </div>
                         </td>
                         <td>
-                            <div class="position-info">
-                                <i class="fas fa-briefcase"></i> {{ candidate.job.title if candidate.job else 'General
-                                Application' }}
-                            </div>
-                        </td>
-                        <td>
-                            <div class="date-info">
-                                <i class="far fa-calendar"></i> {{ candidate.created_at.strftime('%m/%d/%Y') }}
-                            </div>
-                        </td>
-                        <td>
-                            {% set status_class = 'status-screening' %}
-                            {% if candidate.processing_status == 'completed' %}
-                            {% set status_class = 'status-green' %}
-                            {% elif candidate.processing_status == 'failed' %}
-                            {% set status_class = 'status-red' %}
+                            {% if candidate.job %}
+                            <span class="position-tag-small">{{ candidate.job.title }}</span>
+                            {% else %}
+                            <span class="position-tag-small position-tag-muted">General Application</span>
                             {% endif %}
-                            <span class="status-pill {{ status_class }}">{{ candidate.processing_status|capitalize }}</span>
                         </td>
-                        <td style="text-align:right">
-                            <a href="{{ url_for('candidates.view', candidate_id=candidate.id) }}" class="btn-icon">
-                                <i class="far fa-eye"></i> View
-                            </a>
+                        <td>
+                            <div class="contact-cell">
+                                <span class="contact-email"><i class="far fa-envelope"></i> {{ candidate.email }}</span>
+                                <span class="contact-email" style="color: #6b7280; font-size: 0.8rem; margin-top: 0.2rem;"><i class="fas fa-phone-alt"></i> {{ candidate.phone or '+1 (555) 000-0000' }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="datetime-cell">
+                                <span class="date-text"><i class="far fa-calendar"></i> {{ candidate.created_at.strftime('%m/%d/%Y') }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="actions-cell-compact" style="justify-content: flex-end;">
+                                <a href="{{ url_for('candidates.view', candidate_id=candidate.id) }}"
+                                    class="action-btn-icon" title="View">
+                                    <i class="far fa-eye"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% else %}

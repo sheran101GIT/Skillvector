@@ -91,58 +91,64 @@
 
         <!-- Table -->
         <div class="table-scroll">
-            <table class="candidate-table">
+            <table class="resumes-table">
                 <thead>
                     <tr>
-                        <th width="20%">Candidate</th>
-                        <th width="20%">Applied For</th>
-                        <th width="15%">Current Stage</th>
-                        <th width="15%">Applied Date</th>
-                        <th width="15%">Review Status</th>
-                        <th width="15%" style="text-align:right">Actions</th>
+                        <th>Review Status</th>
+                        <th>Candidate</th>
+                        <th>Applied For</th>
+                        <th>Current Stage</th>
+                        <th>Applied Date</th>
+                        <th style="text-align:right">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for candidate in candidates %}
                     <tr>
                         <td>
-                            <div class="cand-cell-profile">
-                                <div class="table-avatar">{{ candidate.name[:2].upper() }}</div>
-                                <div class="cand-cell-info">
-                                    <div class="name">{{ candidate.name }}</div>
-                                    <div class="id">{{ candidate.email }}</div>
-                                </div>
+                            <div class="status-indicator-wrapper">
+                                {% if candidate.review_status == 'pending' %}
+                                <span class="status-dot status-dot-yellow"></span>
+                                <span class="status-badge status-badge-yellow">Pending</span>
+                                {% else %}
+                                <span class="status-dot status-dot-green"></span>
+                                <span class="status-badge status-badge-green">Sent</span>
+                                {% endif %}
                             </div>
                         </td>
                         <td>
-                            <div class="position-tag">
-                                {{ candidate.job.title }}
+                            <div class="candidate-cell">
+                                <span class="candidate-name">{{ candidate.name }}</span>
+                                <span class="candidate-file">{{ candidate.email }}</span>
                             </div>
+                        </td>
+                        <td>
+                            {% if candidate.job %}
+                            <span class="position-tag-small">{{ candidate.job.title }}</span>
+                            {% else %}
+                            <span class="position-tag-small position-tag-muted">Not assigned</span>
+                            {% endif %}
                         </td>
                         <td>
                             <!-- Using processing_status as stage proxy -->
-                            {% set stage_color = 'bg-dark' %}
-                            {% if candidate.processing_status == 'completed' %} {% set stage_color = 'bg-blue' %} {% endif
-                            %}
-                            <span class="stage-pill {{ stage_color }}">{{ candidate.processing_status|capitalize }}</span>
+                            {% set stage_color = 'status-badge-blue' %}
+                            {% if candidate.processing_status == 'completed' %} {% set stage_color = 'status-badge-green' %} {% endif %}
+                            <span class="status-badge {{ stage_color }}">{{ candidate.processing_status|capitalize }}</span>
                         </td>
-                        <td>{{ candidate.created_at.strftime('%Y-%m-%d') }}</td>
                         <td>
-                            {% if candidate.review_status == 'pending' %}
-                            <span class="status-pill status-orange"><i class="far fa-clock"></i> Pending</span>
-                            {% else %}
-                            <span class="status-pill status-green"><i class="fas fa-check"></i> Sent</span>
-                            {% endif %}
+                            <div class="datetime-cell">
+                                <span class="date-text"><i class="far fa-calendar"></i> {{ candidate.created_at.strftime('%Y-%m-%d') }}</span>
+                            </div>
                         </td>
-                        <td style="text-align:right">
-                            <div class="actions-cell">
-                                <button class="btn-icon" 
+                        <td>
+                            <div class="actions-cell-compact" style="justify-content: flex-end; gap: 0.5rem;">
+                                <button class="action-btn-icon" title="View"
                                     data-id="{{ candidate.id }}" 
                                     onclick="openReviewModal(this.dataset.id)">
-                                    <i class="far fa-eye"></i> View
+                                    <i class="far fa-eye"></i>
                                 </button>
                                 <!-- Generate Email button -->
-                                <button class="btn btn-black-small"
+                                <button class="btn btn-black-small" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
                                     data-id="{{ candidate.id }}"
                                     data-name="{{ candidate.name }}"
                                     data-jobid="{{ candidate.job_id or 'null' }}"
