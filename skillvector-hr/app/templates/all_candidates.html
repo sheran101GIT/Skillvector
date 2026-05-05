@@ -11,22 +11,38 @@
     </div>
 
     <!-- Stats Row -->
-    <div class="stats-row-simple">
-        <div class="metric-card small-pad">
-            <div class="metric-sub">Total Candidates</div>
-            <div class="metric-value">{{ stats.total }}</div>
+    <div class="journey-grid" style="margin-bottom: 2rem;">
+        <div class="journey-card">
+            <div class="card-top">
+                <i class="fas fa-users icon-blue"></i>
+                <span class="dot dot-blue"></span>
+            </div>
+            <div class="card-value">{{ stats.total }}</div>
+            <div class="card-label">Total Candidates</div>
         </div>
-        <div class="metric-card small-pad">
-            <div class="metric-sub">Active Applications</div>
-            <div class="metric-value">{{ stats.active }}</div>
+        <div class="journey-card">
+            <div class="card-top">
+                <i class="fas fa-user-check icon-green"></i>
+                <span class="dot dot-green"></span>
+            </div>
+            <div class="card-value">{{ stats.active }}</div>
+            <div class="card-label">Active Applications</div>
         </div>
-        <div class="metric-card small-pad">
-            <div class="metric-sub">Joined</div>
-            <div class="metric-value">{{ stats.joined }}</div>
+        <div class="journey-card">
+            <div class="card-top">
+                <i class="fas fa-handshake icon-teal"></i>
+                <span class="dot dot-teal"></span>
+            </div>
+            <div class="card-value">{{ stats.joined }}</div>
+            <div class="card-label">Joined</div>
         </div>
-        <div class="metric-card small-pad">
-            <div class="metric-sub">This Week</div>
-            <div class="metric-value">{{ stats.week }}</div>
+        <div class="journey-card">
+            <div class="card-top">
+                <i class="far fa-calendar-alt icon-orange"></i>
+                <span class="dot dot-orange"></span>
+            </div>
+            <div class="card-value">{{ stats.week }}</div>
+            <div class="card-label">This Week</div>
         </div>
     </div>
 
@@ -94,7 +110,7 @@
                 </thead>
                 <tbody id="candidatesTableBody">
                     {% for candidate in candidates %}
-                    <tr class="candidate-row" data-name="{{ candidate.name|lower }}"
+                    <tr class="candidate-table-row" data-name="{{ candidate.name|lower }}"
                         data-email="{{ candidate.email|lower }}"
                         data-position="{{ (candidate.job.title if candidate.job else 'General Application')|lower }}"
                         data-stage="{{ candidate.current_stage or 'applied' }}" data-job-id="{{ candidate.job_id or '' }}"
@@ -165,7 +181,7 @@
         const jobFilter = document.getElementById('jobFilter').value;
         const statusFilter = document.getElementById('statusFilter').value;
 
-        const rows = document.querySelectorAll('#candidatesTableBody .candidate-row');
+        const rows = document.querySelectorAll('#candidatesTableBody .candidate-table-row');
         let visibleCount = 0;
 
         rows.forEach(row => {

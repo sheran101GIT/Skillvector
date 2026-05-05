@@ -17,81 +17,71 @@
     <div id="overview-tab" class="tab-content" style="display: block;">
 
         <!-- Metrics Row 1 -->
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-header">
-                    <span>Total Candidate Applications</span>
+        <div class="journey-grid">
+            <div class="journey-card">
+                <div class="card-top">
                     <i class="fas fa-users icon-blue"></i>
+                    <span class="dot dot-blue"></span>
                 </div>
-                <div class="metric-value">{{ total_candidates }}</div>
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill blue" style="width: 45%"></div>
-                </div>
-                <div class="metric-sub">5 currently active</div>
+                <div class="card-value">{{ total_candidates }}</div>
+                <div class="card-label">Total Applications</div>
             </div>
 
-            <div class="metric-card">
-                <div class="metric-header">
-                    <span>Reviews Sent</span>
+            <div class="journey-card">
+                <div class="card-top">
                     <i class="fas fa-envelope icon-purple"></i>
+                    <span class="dot dot-purple"></span>
                 </div>
-                <div class="metric-value">0</div>
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill purple" style="width: 0%"></div>
-                </div>
-                <div class="metric-sub">Pending reviews</div>
+                <div class="card-value">0</div>
+                <div class="card-label">Pending Reviews</div>
             </div>
 
-            <div class="metric-card">
-                <div class="metric-header">
-                    <span>Total Candidates Selected</span>
+            <div class="journey-card">
+                <div class="card-top">
                     <i class="fas fa-check-circle icon-green"></i>
+                    <span class="dot dot-green"></span>
                 </div>
-                <div class="metric-value">{{ metrics.total_selected }}</div>
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill green" style="width: {{ metrics.success_rate }}%"></div>
-                </div>
-                <div class="metric-sub">Offers extended & joined</div>
+                <div class="card-value">{{ metrics.total_selected }}</div>
+                <div class="card-label">Selected Candidates</div>
             </div>
 
-            <div class="metric-card">
-                <div class="metric-header">
-                    <span>Success Rate</span>
+            <div class="journey-card">
+                <div class="card-top">
                     <i class="fas fa-chart-line icon-orange"></i>
+                    <span class="dot dot-orange"></span>
                 </div>
-                <div class="metric-value">{{ metrics.success_rate }}%</div>
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill orange" style="width: 0%"></div>
-                </div>
-                <div class="metric-sub">Conversion to offer/joined</div>
+                <div class="card-value">{{ metrics.success_rate }}%</div>
+                <div class="card-label">Success Rate</div>
             </div>
         </div>
 
         <!-- Metrics Row 2 -->
-        <div class="metrics-grid" style="margin-top: 1rem;">
-            <div class="metric-card small-card">
-                <div class="metric-header-simple">
+        <div class="journey-grid" style="margin-top: 1rem;">
+            <div class="journey-card">
+                <div class="card-top">
                     <i class="fas fa-search icon-grey"></i>
-                    <span>In Screening</span>
+                    <span class="dot dot-blue"></span>
                 </div>
-                <div class="metric-value-small">{{ metrics.screening }} <span class="unit">candidates</span></div>
+                <div class="card-value">{{ metrics.screening }}</div>
+                <div class="card-label">In Screening</div>
             </div>
 
-            <div class="metric-card small-card">
-                <div class="metric-header-simple">
-                    <i class="fas fa-calendar icon-grey"></i>
-                    <span>Interviews Scheduled</span>
+            <div class="journey-card">
+                <div class="card-top">
+                    <i class="fas fa-calendar-alt icon-grey"></i>
+                    <span class="dot dot-orange"></span>
                 </div>
-                <div class="metric-value-small">{{ metrics.interview_scheduled }} <span class="unit">upcoming</span>
-                </div>
+                <div class="card-value">{{ metrics.interview_scheduled }}</div>
+                <div class="card-label">Interviews Scheduled</div>
             </div>
 
-            <div class="metric-card small-card">
-                <div class="metric-header-simple">
+            <div class="journey-card">
+                <div class="card-top">
                     <i class="fas fa-briefcase icon-grey"></i>
-                    <span>Active Job Positions</span>
+                    <span class="dot dot-purple"></span>
                 </div>
-                <div class="metric-value-small">{{ jobs|length }} <span class="unit">open positions</span></div>
+                <div class="card-value">{{ jobs|length }}</div>
+                <div class="card-label">Active Job Positions</div>
             </div>
         </div>
 

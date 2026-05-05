@@ -10,41 +10,38 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="stats-row-simple">
-        <div class="metric-card small-pad">
-            <div class="metric-header-simple" style="justify-content: space-between;">
-                <span>Total Candidates</span>
+    <div class="journey-grid" style="margin-bottom: 2rem;">
+        <div class="journey-card">
+            <div class="card-top">
                 <i class="fas fa-users icon-grey"></i>
+                <span class="dot dot-blue"></span>
             </div>
-            <div class="metric-value">{{ stats.total }}</div>
-            <div class="metric-sub">All stages</div>
+            <div class="card-value">{{ stats.total }}</div>
+            <div class="card-label">Total Candidates</div>
         </div>
-
-        <div class="metric-card small-pad">
-            <div class="metric-header-simple" style="justify-content: space-between;">
-                <span>Reviews Sent</span>
+        <div class="journey-card">
+            <div class="card-top">
                 <i class="fas fa-check-circle icon-green"></i>
+                <span class="dot dot-green"></span>
             </div>
-            <div class="metric-value">{{ stats.sent }}</div>
-            <div class="metric-sub">Email delivered</div>
+            <div class="card-value">{{ stats.sent }}</div>
+            <div class="card-label">Reviews Sent</div>
         </div>
-
-        <div class="metric-card small-pad">
-            <div class="metric-header-simple" style="justify-content: space-between;">
-                <span>Pending Reviews</span>
+        <div class="journey-card">
+            <div class="card-top">
                 <i class="far fa-clock icon-orange"></i>
+                <span class="dot dot-orange"></span>
             </div>
-            <div class="metric-value">{{ stats.pending }}</div>
-            <div class="metric-sub">Awaiting review</div>
+            <div class="card-value">{{ stats.pending }}</div>
+            <div class="card-label">Pending Reviews</div>
         </div>
-
-        <div class="metric-card small-pad">
-            <div class="metric-header-simple" style="justify-content: space-between;">
-                <span>Active Candidates</span>
+        <div class="journey-card">
+            <div class="card-top">
                 <i class="fas fa-chart-line icon-blue"></i>
+                <span class="dot dot-purple"></span>
             </div>
-            <div class="metric-value">{{ stats.active }}</div>
-            <div class="metric-sub">In progress</div>
+            <div class="card-value">{{ stats.active }}</div>
+            <div class="card-label">Active Candidates</div>
         </div>
     </div>
 
@@ -57,10 +54,21 @@
             </button>
         </form>
 
-        <div class="filter-dropdown grey-bg">
-            <span>All Stages</span>
-            <i class="fas fa-chevron-down"></i>
-        </div>
+        <select id="stageFilter" class="filter-dropdown grey-bg" onchange="filterReviews()" style="appearance: auto;">
+            <option value="">All Stages</option>
+            <option value="Applied">Applied</option>
+            <option value="Aptitude">Aptitude</option>
+            <option value="Screening">Screening</option>
+            <option value="Group Discussion">Group Discussion</option>
+            <option value="Technical Round">Technical Round</option>
+            <option value="HR Round">HR Round</option>
+            <option value="Interview Scheduled">Interview Scheduled</option>
+            <option value="Interview Completed">Interview Completed</option>
+            <option value="Selected">Selected</option>
+            <option value="Offer Extended">Offer Extended</option>
+            <option value="Joined">Joined</option>
+            <option value="Rejected">Rejected</option>
+        </select>
 
         <div style="margin-left: auto;">
             <span class="count-badge">{{ candidates|length }} candidates</span>
@@ -104,7 +112,7 @@
                 </thead>
                 <tbody>
                     {% for candidate in candidates %}
-                    <tr>
+                    <tr class="review-row" data-stage="{{ candidate.current_stage or 'applied' }}">
                         <td>
                             <div class="status-indicator-wrapper">
                                 {% if candidate.review_status == 'pending' %}
@@ -724,5 +732,27 @@
             if (event.target === modal) modal.style.display = 'none';
         });
     });
+
+    // ── NEW: Filter Reviews Function ──────────────────────────────────
+    function filterReviews() {
+        const stageFilter = document.getElementById('stageFilter').value.toLowerCase();
+        const rows = document.querySelectorAll('.review-row');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const stage = (row.dataset.stage || '').toLowerCase();
+            if (!stageFilter || stage === stageFilter) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        const countSpan = document.querySelector('.count-badge');
+        if (countSpan) {
+            countSpan.textContent = visibleCount + ' candidate' + (visibleCount !== 1 ? 's' : '');
+        }
+    }
 </script>
 {% endblock %}
