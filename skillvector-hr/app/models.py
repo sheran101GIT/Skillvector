@@ -98,6 +98,18 @@ class Analysis(db.Model):
     final_score = db.Column(db.Float)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def __init__(self, candidate_id=None, job_id=None, similarity=None,
+                 missing_skills=None, skills_matched=None,
+                 phrasing_suggestions=None, final_score=None, **kwargs):
+        super().__init__(**kwargs)
+        self.candidate_id = candidate_id
+        self.job_id = job_id
+        self.similarity = similarity
+        self.missing_skills = missing_skills
+        self.skills_matched = skills_matched
+        self.phrasing_suggestions = phrasing_suggestions
+        self.final_score = final_score
+
 class Note(db.Model):
     __tablename__ = 'notes'
     id = db.Column(db.Integer, primary_key=True)
@@ -169,4 +181,19 @@ class ReviewEmail(db.Model):
     # Relationships
     candidate = db.relationship('Candidate', backref=db.backref('review_emails', lazy=True))
     job       = db.relationship('Job',       backref=db.backref('review_emails', lazy=True))
+
+    def __init__(self, candidate_id=None, job_id=None, generated_by=None,
+                 stage_notes_snapshot=None, analysis_snapshot=None,
+                 email_subject=None, email_body=None, decision=None,
+                 status='draft', **kwargs):
+        super().__init__(**kwargs)
+        self.candidate_id = candidate_id
+        self.job_id = job_id
+        self.generated_by = generated_by
+        self.stage_notes_snapshot = stage_notes_snapshot
+        self.analysis_snapshot = analysis_snapshot
+        self.email_subject = email_subject
+        self.email_body = email_body
+        self.decision = decision
+        self.status = status
 
