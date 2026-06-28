@@ -1,4 +1,30 @@
+# Environment variables (never commit these - contain API keys & DB passwords)
 .env
-.env
+.env.*
+
+# Python
 __pycache__/
-*.pycgit 
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Database backups (contain real user data - keep locally only)
+*.sql
+migrations/
+
+# Uploads
+skillvector-hr/uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
