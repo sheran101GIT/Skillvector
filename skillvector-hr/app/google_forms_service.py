@@ -71,11 +71,11 @@ def extract_form_id_from_url(url: str) -> str | None:
     """
     Extract the Google Form ID from a variety of URL formats:
       - https://docs.google.com/forms/d/<ID>/edit
-      - https://docs.google.com/forms/d/<ID>/viewform
+      - https://docs.google.com/forms/d/e/<ID>/viewform
       - https://forms.gle/<shortcode>  (not supported — needs redirect)
     """
-    # Standard Google Forms URL
-    match = re.search(r'/forms/d/([a-zA-Z0-9_-]+)', url)
+    # Standard Google Forms URL (supports /d/ or /d/e/)
+    match = re.search(r'/forms/d/(?:e/)?([a-zA-Z0-9_-]+)', url)
     if match:
         return match.group(1)
     # If they paste the form ID directly
