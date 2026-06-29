@@ -19,3 +19,5 @@ Flask-Executor==1.0.0
 Flask-WTF==1.2.1
 groq>=0.4.2
 gunicorn>=21.2.0
+google-api-python-client>=2.100.0
+google-auth>=2.23.0

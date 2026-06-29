@@ -152,9 +152,24 @@ class GoogleFormConnection(db.Model):
     form_title = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_sync = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
+    # --- Google Forms API fields ---
+    # Extracted form ID from the URL (e.g. "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms")
+    form_id = db.Column(db.String(256))
+    # Maps question IDs / titles to candidate fields: {"q_id": "name", "q_id2": "email", ...}
+    field_mapping = db.Column(JSONB)
+    # Last response ID fetched — used as cursor to avoid re-importing
+    last_response_id = db.Column(db.String(256))
+    # Status: active, error, paused, pending_mapping
+    sync_status = db.Column(db.String(32), default='pending_mapping')
+    # Total candidates successfully imported via this connection
+    total_synced = db.Column(db.Integer, default=0)
+    # Last error message if sync failed
+    last_error = db.Column(db.Text)
+
     # Relationships
     job = db.relationship('Job', backref=db.backref('google_forms', lazy=True))
+
 
 
 class ReviewEmail(db.Model):

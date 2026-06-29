@@ -9,11 +9,17 @@ bp = Blueprint('uploads', __name__, url_prefix='/uploads')
 def index():
     from ..models import JobTemplate
     
-    # Fetch all jobs
+    # Fetch all jobs belonging to the current user
     jobs = Job.query.filter_by(recruiter_id=current_user.id).order_by(Job.posted_at.desc()).all()
     
-    # Fetch all candidates (for uploaded resumes tab)
-    candidates = Candidate.query.order_by(Candidate.created_at.desc()).all()
+    # Fetch only candidates linked to the current user's jobs (data isolation fix)
+    user_job_ids = [job.id for job in jobs]
+    candidates = (
+        Candidate.query
+        .filter(Candidate.job_id.in_(user_job_ids))
+        .order_by(Candidate.created_at.desc())
+        .all()
+    ) if user_job_ids else []
     
     # Auto-fail stuck jobs (> 2 mins)
     import datetime
@@ -169,49 +175,172 @@ def deactivate_job(job_id):
 @bp.route('/connect-form', methods=['POST'])
 @login_required
 def connect_form():
-    """Connect a Google Form to a job for automated resume collection"""
+    """Connect a Google Form to a job. Extracts form_id and auto-detects field mapping."""
     from ..models import GoogleFormConnection
-    
-    job_id = request.form.get('job_id')
-    form_url = request.form.get('form_url')
-    form_title = request.form.get('form_title')
-    
+    from ..google_forms_service import (
+        get_google_forms_service, extract_form_id_from_url, auto_detect_field_mapping
+    )
+
+    job_id   = request.form.get('job_id')
+    form_url = request.form.get('form_url', '').strip()
+
     if not job_id or not form_url:
         flash('Please select a job and provide a Google Form URL', 'error')
         return redirect(url_for('uploads.index'))
-    
+
     job = Job.query.get_or_404(int(job_id))
     if job.recruiter_id != current_user.id:
         flash("Unauthorized", "error")
         return redirect(url_for('uploads.index'))
-    
-    # Save connection
-    title = form_title if form_title else f"{job.title} - Application Form"
+
+    # Extract form ID from URL
+    form_id = extract_form_id_from_url(form_url)
+    if not form_id:
+        flash('Could not extract Form ID from the URL. Please paste the full Google Form URL.', 'error')
+        return redirect(url_for('uploads.index'))
+
+    # Fetch form metadata + auto-detect field mapping via the API
+    form_title = f"{job.title} - Application Form"
+    field_mapping = {}
+    sync_status = 'pending_mapping'
+
+    try:
+        svc = get_google_forms_service()
+        meta = svc.get_form_metadata(form_id)
+        form_title = meta['title'] or form_title
+        field_mapping = auto_detect_field_mapping(meta['questions'])
+        sync_status = 'active'
+        flash(f"Connected \"{form_title}\" — field mapping auto-detected. Review it below.", "success")
+    except RuntimeError as e:
+        # Service account not configured or API error — still save the connection
+        err = str(e)
+        if 'GOOGLE_SERVICE_ACCOUNT_JSON' in err:
+            flash(
+                'Google Forms connected (URL saved), but the Google Service Account is not configured. '
+                'Add GOOGLE_SERVICE_ACCOUNT_JSON to your environment variables to enable API sync.',
+                'warning'
+            )
+        else:
+            flash(f'Form connected but could not fetch metadata: {err}', 'warning')
+        sync_status = 'error'
+
     connection = GoogleFormConnection(
         recruiter_id=current_user.id,
         job_id=job.id,
         form_url=form_url,
-        form_title=title
+        form_id=form_id,
+        form_title=form_title,
+        field_mapping=field_mapping,
+        sync_status=sync_status,
+        total_synced=0,
     )
     db.session.add(connection)
     db.session.commit()
-    
-    flash(f"Successfully connected Google Form: {title}", "success")
     return redirect(url_for('uploads.index'))
+
+
+@bp.route('/sync-form/<int:connection_id>', methods=['POST'])
+@login_required
+def sync_form(connection_id):
+    """Manually trigger a sync for a connected Google Form."""
+    from ..models import GoogleFormConnection
+    from ..google_forms_service import get_google_forms_service
+
+    conn = GoogleFormConnection.query.get_or_404(connection_id)
+    if conn.recruiter_id != current_user.id:
+        flash("Unauthorized", "error")
+        return redirect(url_for('uploads.index'))
+
+    if not conn.form_id:
+        flash("No Form ID — please reconnect this form.", "error")
+        return redirect(url_for('uploads.index'))
+
+    if not conn.field_mapping:
+        flash("Field mapping is not configured yet. Please set it up first.", "warning")
+        return redirect(url_for('uploads.index'))
+
+    try:
+        svc = get_google_forms_service()
+        result = svc.sync_connection(conn, app_context=None)
+        imported = result['imported']
+        errors   = result['errors']
+
+        if imported > 0:
+            flash(f"Synced {imported} new candidate(s) from \"{conn.form_title}\"!", "success")
+        else:
+            flash(f"No new responses found in \"{conn.form_title}\".", "info")
+
+        if errors:
+            flash(f"{len(errors)} response(s) had errors: {errors[0]}", "warning")
+
+    except RuntimeError as e:
+        flash(f"Sync failed: {e}", "error")
+
+    return redirect(url_for('uploads.index'))
+
+
+@bp.route('/save-field-mapping/<int:connection_id>', methods=['POST'])
+@login_required
+def save_field_mapping(connection_id):
+    """Save the recruiter-adjusted field mapping for a Google Form connection."""
+    from ..models import GoogleFormConnection
+
+    conn = GoogleFormConnection.query.get_or_404(connection_id)
+    if conn.recruiter_id != current_user.id:
+        flash("Unauthorized", "error")
+        return redirect(url_for('uploads.index'))
+
+    # Collect mapping from form: field_map[question_id] = candidate_field
+    new_mapping = {}
+    for key, value in request.form.items():
+        if key.startswith('mapping_'):
+            q_id = key[len('mapping_'):]
+            new_mapping[q_id] = value
+
+    conn.field_mapping = new_mapping
+    conn.sync_status = 'active'
+    db.session.commit()
+    flash(f"Field mapping saved for \"{conn.form_title}\".", "success")
+    return redirect(url_for('uploads.index'))
+
+
+@bp.route('/get-form-questions/<int:connection_id>', methods=['GET'])
+@login_required
+def get_form_questions(connection_id):
+    """API endpoint: returns form questions + current mapping for the mapping modal."""
+    from flask import jsonify
+    from ..models import GoogleFormConnection
+    from ..google_forms_service import get_google_forms_service
+
+    conn = GoogleFormConnection.query.get_or_404(connection_id)
+    if conn.recruiter_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        svc = get_google_forms_service()
+        meta = svc.get_form_metadata(conn.form_id)
+        return jsonify({
+            'form_title': meta['title'],
+            'questions': meta['questions'],
+            'current_mapping': conn.field_mapping or {},
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @bp.route('/disconnect-form/<int:connection_id>', methods=['POST'])
 @login_required
 def disconnect_form(connection_id):
     """Remove a Google Form connection"""
     from ..models import GoogleFormConnection
-    
+
     conn = GoogleFormConnection.query.get_or_404(connection_id)
     if conn.recruiter_id != current_user.id:
         flash("Unauthorized", "error")
         return redirect(url_for('uploads.index'))
-        
+
     db.session.delete(conn)
     db.session.commit()
-    
     flash("Disconnected Google Form", "success")
     return redirect(url_for('uploads.index'))
+

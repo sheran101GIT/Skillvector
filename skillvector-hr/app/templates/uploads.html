@@ -345,19 +345,51 @@
 
                 <div class="connected-forms-list">
                     {% for form in google_forms %}
-                    <div class="connected-form-item">
+                    <div class="connected-form-item" style="flex-wrap:wrap; gap:0.75rem;">
                         <div class="form-icon">
                             <i class="fab fa-google-drive"></i>
                         </div>
-                        <div class="form-details">
+                        <div class="form-details" style="flex:1; min-width:200px;">
                             <span class="form-name">{{ form.form_title }}</span>
-                            <span class="form-meta">Linked to: {{ form.job.title }} • Created: {{
-                                form.created_at.strftime('%Y-%m-%d') }}</span>
-                        </div>
-                        <div class="form-actions">
-                            <span class="sync-badge sync-active">
-                                <i class="fas fa-check-circle"></i> Active
+                            <span class="form-meta">
+                                Linked to: <strong>{{ form.job.title }}</strong>
+                                &nbsp;&bull;&nbsp;
+                                {% if form.last_sync %}
+                                Last synced: {{ form.last_sync.strftime('%d %b %Y, %H:%M') }}
+                                {% else %}Never synced{% endif %}
+                                &nbsp;&bull;&nbsp;
+                                <strong>{{ form.total_synced or 0 }}</strong> candidates imported
                             </span>
+                            {% if form.sync_status == 'error' and form.last_error %}
+                            <span style="font-size:0.75rem; color:#dc2626; display:block; margin-top:0.2rem;">
+                                <i class="fas fa-exclamation-circle"></i> {{ form.last_error[:120] }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="form-actions" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                            {% if form.sync_status == 'active' %}
+                            <span class="sync-badge sync-active"><i class="fas fa-check-circle"></i> Active</span>
+                            {% elif form.sync_status == 'error' %}
+                            <span class="sync-badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;"><i class="fas fa-exclamation-circle"></i> Error</span>
+                            {% elif form.sync_status == 'pending_mapping' %}
+                            <span class="sync-badge" style="background:#fffbeb;color:#d97706;border:1px solid #fde68a;"><i class="fas fa-exclamation-triangle"></i> Setup Required</span>
+                            {% else %}
+                            <span class="sync-badge" style="background:#f3f4f6;color:#6b7280;"><i class="fas fa-pause-circle"></i> Paused</span>
+                            {% endif %}
+
+                            <button type="button" class="btn-configure"
+                                onclick="openMappingModal({{ form.id }})">
+                                <i class="fas fa-sliders-h"></i> Field Mapping
+                            </button>
+
+                            <form action="{{ url_for('uploads.sync_form', connection_id=form.id) }}" method="POST" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-configure"
+                                    style="background:#1a1a2e;color:#fff;border-color:#1a1a2e;">
+                                    <i class="fas fa-sync-alt"></i> Sync Now
+                                </button>
+                            </form>
+
                             <form action="{{ url_for('uploads.disconnect_form', connection_id=form.id) }}" method="POST"
                                 onsubmit="return confirm('Disconnect this Google Form?');">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -385,69 +417,35 @@
             </div>
         </div>
 
-        <!-- Configure Form Modal -->
-        <div id="configureFormModal" class="modal-backdrop">
+        <!-- Field Mapping Modal -->
+        <div id="mappingModal" class="modal-backdrop" style="display:none;">
             <div class="modal-content-large">
                 <div class="modal-header">
-                    <h2>Configure Google Form Connection</h2>
-                    <button class="close-btn" onclick="closeConfigureModal()"><i class="fas fa-times"></i></button>
+                    <h2><i class="fas fa-sliders-h" style="margin-right:0.5rem;"></i>Edit Field Mapping</h2>
+                    <button class="close-btn" onclick="closeMappingModal()"><i class="fas fa-times"></i></button>
                 </div>
-                <p class="modal-subtitle">Configure how submissions from this form are processed</p>
+                <p class="modal-subtitle">Map each Google Form question to the correct candidate field so SkillVector knows how to read your responses.</p>
 
-                <form id="configureForm">
-                    <div class="form-group">
-                        <label>Sync Frequency</label>
-                        <select class="form-input">
-                            <option value="realtime">Real-time (Webhook)</option>
-                            <option value="5min" selected>Every 5 minutes</option>
-                            <option value="15min">Every 15 minutes</option>
-                            <option value="hourly">Hourly</option>
-                        </select>
+                <div id="mappingLoading" style="text-align:center; padding:2rem; color:#6b7280;">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p style="margin-top:0.75rem;">Loading form questions from Google...</p>
+                </div>
+                <div id="mappingError" style="display:none; color:#dc2626; padding:1rem; background:#fef2f2; border-radius:8px; margin-bottom:1rem;"></div>
+
+                <form id="mappingForm" method="POST" style="display:none;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:0.75rem 1rem; margin-bottom:1.25rem; font-size:0.85rem; color:#0369a1;">
+                        <i class="fas fa-info-circle"></i>
+                        Since your form has a <strong>File Upload</strong> field for resumes, map that question to <strong>&ldquo;Resume File (Upload)&rdquo;</strong> below. The app will download the PDF/DOCX from Google Drive automatically.
                     </div>
-
-                    <div class="form-group">
-                        <label>Field Mapping</label>
-                        <div class="field-mapping-grid">
-                            <div class="field-map-row">
-                                <span class="field-map-label">Name Field:</span>
-                                <select class="form-input-small">
-                                    <option>Full Name</option>
-                                    <option>Candidate Name</option>
-                                </select>
-                            </div>
-                            <div class="field-map-row">
-                                <span class="field-map-label">Email Field:</span>
-                                <select class="form-input-small">
-                                    <option>Email Address</option>
-                                    <option>Contact Email</option>
-                                </select>
-                            </div>
-                            <div class="field-map-row">
-                                <span class="field-map-label">Resume Field:</span>
-                                <select class="form-input-small">
-                                    <option>Upload Resume</option>
-                                    <option>Resume File</option>
-                                </select>
-                            </div>
-                        </div>
+                    <div class="field-mapping-grid" id="mappingGrid" style="display:flex; flex-direction:column; gap:0.75rem;">
+                        <!-- Populated by JS -->
                     </div>
-
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" checked> Auto-process new submissions
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" checked> Store resumes in database (not Google Drive)
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox"> Send confirmation email to applicants
-                        </label>
-                    </div>
-
-                    <div class="modal-actions">
-                        <button type="button" class="btn-outline-action" onclick="closeConfigureModal()">Cancel</button>
-                        <button type="submit" class="btn-black-block" style="width:auto; margin-top:0;">Save
-                            Configuration</button>
+                    <div class="modal-actions" style="margin-top:1.5rem; display:flex; gap:1rem; justify-content:flex-end;">
+                        <button type="button" class="btn-outline-action" onclick="closeMappingModal()">Cancel</button>
+                        <button type="submit" class="btn-black-block" style="width:auto; margin-top:0;">
+                            <i class="fas fa-save"></i> Save Mapping
+                        </button>
                     </div>
                 </form>
             </div>
@@ -460,7 +458,7 @@
                     <h2>Connect Google Form</h2>
                     <button class="close-btn" onclick="closeAddFormModal()"><i class="fas fa-times"></i></button>
                 </div>
-                <p class="modal-subtitle">Connect a Google Form to automatically receive candidate applications</p>
+                <p class="modal-subtitle">Connect a Google Form to automatically receive and process candidate applications via the Forms API</p>
 
                 <form action="{{ url_for('uploads.connect_form') }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -469,34 +467,32 @@
                         <select name="job_id" class="form-input" required>
                             <option value="">-- Select Job --</option>
                             {% for job in jobs %}
-                            <option value="{{ job.id }}">{{ job.title }}{% if job.department %} - {{ job.department }}{%
-                                endif %}</option>
+                            <option value="{{ job.id }}">{{ job.title }}{% if job.department %} - {{ job.department }}{% endif %}</option>
                             {% endfor %}
                         </select>
                     </div>
 
                     <div class="form-group">
-                        <label>Google Form URL or ID</label>
+                        <label>Google Form URL</label>
                         <input type="text" name="form_url" class="form-input"
-                            placeholder="https://docs.google.com/forms/d/e/FORM_ID/viewform" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Form Title (Display Name)</label>
-                        <input type="text" name="form_title" class="form-input"
-                            placeholder="e.g. Frontend Developer - Application Form">
+                            placeholder="https://docs.google.com/forms/d/YOUR_FORM_ID/edit" required>
+                        <small style="color:#6b7280; margin-top:0.3rem; display:block;">
+                            Paste the full URL from your browser when the form is open in Google Forms.
+                        </small>
                     </div>
 
                     <div class="api-info-box">
-                        <i class="fas fa-info-circle"></i>
+                        <i class="fas fa-magic"></i>
                         <div>
-                            <strong>Important:</strong> Resumes uploaded through connected forms will be stored directly
-                            in our database, not in Google Drive. Make sure your form has a File Upload field for resume
-                            collection.
+                            <strong>What happens next:</strong> We&apos;ll connect to the Google Forms API, read your form&apos;s questions,
+                            and <em>auto-detect</em> which field is Name, Email, Resume, etc. You can review and adjust
+                            the mapping before syncing any candidates.
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-black-block">Connect Form</button>
+                    <button type="submit" class="btn-black-block">
+                        <i class="fas fa-plug"></i> Connect &amp; Auto-Detect Fields
+                    </button>
                 </form>
             </div>
         </div>
@@ -644,13 +640,75 @@
         document.getElementById('createJobModal').style.display = 'none';
     }
 
-    // API Pipeline Modal Functions
-    function openConfigureModal(formId) {
-        document.getElementById('configureFormModal').style.display = 'flex';
+    // Field Mapping Modal
+    function openMappingModal(connectionId) {
+        const modal = document.getElementById('mappingModal');
+        const loading = document.getElementById('mappingLoading');
+        const errorDiv = document.getElementById('mappingError');
+        const form = document.getElementById('mappingForm');
+        const grid = document.getElementById('mappingGrid');
+
+        // Reset state
+        loading.style.display = 'block';
+        errorDiv.style.display = 'none';
+        form.style.display = 'none';
+        grid.innerHTML = '';
+        modal.style.display = 'flex';
+
+        // Set form action
+        form.action = '/uploads/save-field-mapping/' + connectionId;
+
+        const FIELD_OPTIONS = [
+            { value: 'name',         label: 'Candidate Name' },
+            { value: 'email',        label: 'Email Address' },
+            { value: 'phone',        label: 'Phone Number' },
+            { value: 'resume_file',  label: 'Resume File (Upload)' },
+            { value: 'resume_text',  label: 'Resume Text (Pasted)' },
+            { value: 'linkedin_url', label: 'LinkedIn URL' },
+            { value: 'github_url',   label: 'GitHub URL' },
+            { value: 'ignore',       label: '— Ignore this field —' },
+        ];
+
+        fetch('/uploads/get-form-questions/' + connectionId)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+
+                loading.style.display = 'none';
+                form.style.display = 'block';
+
+                const questions = data.questions;
+                const mapping = data.current_mapping || {};
+
+                if (questions.length === 0) {
+                    grid.innerHTML = '<p style="color:#6b7280;">No questions found in this form.</p>';
+                    return;
+                }
+
+                questions.forEach(q => {
+                    const currentVal = mapping[q.id] || 'ignore';
+                    const selectOptions = FIELD_OPTIONS.map(opt =>
+                        `<option value="${opt.value}" ${opt.value === currentVal ? 'selected' : ''}>${opt.label}</option>`
+                    ).join('');
+
+                    grid.innerHTML += `
+                        <div style="display:flex; align-items:center; gap:1rem; padding:0.6rem; background:#f9fafb; border-radius:8px;">
+                            <span style="flex:1; font-size:0.9rem; color:#1f2937;"><i class="fas fa-question-circle" style="color:#9ca3af; margin-right:0.4rem;"></i>${q.title}</span>
+                            <select name="mapping_${q.id}" style="flex:0 0 220px; padding:0.4rem 0.6rem; border:1px solid #d1d5db; border-radius:6px; font-size:0.85rem;">
+                                ${selectOptions}
+                            </select>
+                        </div>`;
+                });
+            })
+            .catch(err => {
+                loading.style.display = 'none';
+                errorDiv.style.display = 'block';
+                errorDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + err.message;
+            });
     }
 
-    function closeConfigureModal() {
-        document.getElementById('configureFormModal').style.display = 'none';
+    function closeMappingModal() {
+        document.getElementById('mappingModal').style.display = 'none';
     }
 
     function openAddFormModal() {
@@ -700,7 +758,7 @@
 
     // Close on click outside
     window.onclick = function (event) {
-        var modals = ['createJobModal', 'configureFormModal', 'addFormModal'];
+        var modals = ['createJobModal', 'addFormModal', 'mappingModal'];
         modals.forEach(function (modalId) {
             var modal = document.getElementById(modalId);
             if (event.target == modal) {
