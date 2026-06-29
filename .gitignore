@@ -16,7 +16,7 @@ venv/
 
 # Database backups (contain real user data - keep locally only)
 *.sql
-migrations/
+migrations/__pycache__/
 
 # Uploads
 skillvector-hr/uploads/
