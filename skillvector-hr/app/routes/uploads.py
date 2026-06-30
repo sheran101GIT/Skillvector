@@ -21,14 +21,16 @@ def index():
         .all()
     ) if user_job_ids else []
     
-    # Auto-fail stuck jobs (> 2 mins)
+    # Auto-fail truly stuck jobs.
+    # Pipeline includes: SpaCy load + Groq/Gemini LLM calls + embeddings + phrasing.
+    # On Render free tier with cold starts this can take 10-15 min. Use 20 min threshold.
     import datetime
-    stuck_threshold = datetime.datetime.utcnow() - datetime.timedelta(minutes=2)
+    stuck_threshold = datetime.datetime.utcnow() - datetime.timedelta(minutes=20)
     stuck_candidates = [c for c in candidates if c.processing_status in ['processing', 'pending'] and c.created_at < stuck_threshold]
     if stuck_candidates:
         for c in stuck_candidates:
             c.processing_status = 'failed'
-            c.error_message = 'Processing timed out (stuck).'
+            c.error_message = 'Processing timed out after 20 minutes. Please use Refresh Analysis to retry.'
         db.session.commit()
 
     # --- NEW: Pick up pending Google Forms candidates ---
@@ -57,35 +59,55 @@ def index():
             flash(f"Picked up {count} new application(s) from Google Forms", "success")
     
     # Calculate stats
-    
-    # Calculate stats
     total = len(candidates)
     processed = sum(1 for c in candidates if c.processing_status == 'completed')
     processing = sum(1 for c in candidates if c.processing_status == 'processing')
     errors = sum(1 for c in candidates if c.processing_status == 'failed')
-    
+
     stats = {
         'total': total,
         'processed': processed,
         'processing': processing,
         'errors': errors
     }
-    
+
     # Analytics: Application counts per job
     job_analytics = {}
     for job in jobs:
-         count = Candidate.query.filter_by(job_id=job.id).count()
-         job_analytics[job.id] = count
-         
+        count = Candidate.query.filter_by(job_id=job.id).count()
+        job_analytics[job.id] = count
+
     # Templates
     templates = JobTemplate.query.filter_by(created_by=current_user.id).all()
-    
+
     # Google Forms
     from ..models import GoogleFormConnection
     google_forms = GoogleFormConnection.query.filter_by(recruiter_id=current_user.id).all()
-    
-    return render_template('uploads.html', jobs=jobs, candidates=candidates, stats=stats, 
-                           job_analytics=job_analytics, templates=templates, google_forms=google_forms)
+
+    # API Pipeline stats: Today's Submissions vs Yesterday
+    import datetime
+    now = datetime.datetime.utcnow()
+    today_start     = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - datetime.timedelta(days=1)
+
+    today_count = sum(
+        1 for c in candidates
+        if c.created_at and c.created_at >= today_start
+    )
+    yesterday_count = sum(
+        1 for c in candidates
+        if c.created_at and yesterday_start <= c.created_at < today_start
+    )
+    yesterday_diff = today_count - yesterday_count
+
+    api_stats = {
+        'today_submissions': today_count,
+        'yesterday_diff': yesterday_diff,
+    }
+
+    return render_template('uploads.html', jobs=jobs, candidates=candidates, stats=stats,
+                           job_analytics=job_analytics, templates=templates,
+                           google_forms=google_forms, api_stats=api_stats)
 
 @bp.route('/upload', methods=['POST'])
 @login_required

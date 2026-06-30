@@ -70,15 +70,17 @@ def view(candidate_id):
     if candidate.job and candidate.job.recruiter_id != current_user.id:
         return redirect(url_for('main.dashboard'))
         
-    # Check for stale pending status (zombie job)
+    # Check for stale pending status (zombie job).
+    # Pipeline can take 10-15 min on Render free tier (cold start + SpaCy + LLM calls).
+    # Only mark failed after 20 minutes of no progress.
     if candidate.processing_status in ['pending', 'processing']:
         import datetime
-        limit = datetime.datetime.utcnow() - datetime.timedelta(minutes=2)
-        # Use updated_at if available, else created_at
+        limit = datetime.datetime.utcnow() - datetime.timedelta(minutes=20)
+        # Use updated_at if available (updates when processing starts), else created_at
         check_time = candidate.updated_at if candidate.updated_at else candidate.created_at
         if check_time < limit:
             candidate.processing_status = 'failed'
-            candidate.error_message = 'Processing timeout (likely interrupted). Please re-upload.'
+            candidate.error_message = 'Processing timed out after 20 minutes. Click "Refresh Analysis" to retry.'
             db.session.commit()
         
     analysis = Analysis.query.filter_by(candidate_id=candidate.id).order_by(Analysis.created_at.desc()).first()

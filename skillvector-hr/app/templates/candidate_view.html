@@ -77,11 +77,12 @@
         <i class="fas fa-spinner fa-spin"></i>
         <div>
             <strong>Analyzing Candidate...</strong>
-            <p>We are extracting skills, generating embeddings, and getting AI suggestions. This page will refresh
-                automatically.</p>
+            <p>Extracting skills, generating embeddings, and running AI analysis.
+               This may take <strong>5–15 minutes</strong> on first run (model loading + API calls).
+               This page auto-refreshes every 15 seconds.</p>
         </div>
         <script>
-            setTimeout(function () { window.location.reload(1); }, 3000);
+            setTimeout(function () { window.location.reload(1); }, 15000);
         </script>
     </div>
     {% elif candidate.processing_status == 'failed' %}
@@ -195,8 +196,9 @@
                 {# --- Compute real percentages from analysis data --- #}
                 {% set total_skills = (analysis.skills_matched|length) + (analysis.missing_skills|length) %}
                 {% set skills_pct = ((analysis.skills_matched|length / total_skills * 100)|int) if total_skills > 0 else 0 %}
-                {% set semantic_pct = ((analysis.similarity * 100)|int) if analysis.similarity else 0 %}
-                {% set overall_pct = ((analysis.final_score * 100)|int) if analysis.final_score else 0 %}
+                {# Use `is not none` guard — similarity/final_score of 0.0 is valid, not missing #}
+                {% set semantic_pct = ((analysis.similarity * 100)|int) if analysis.similarity is not none else 0 %}
+                {% set overall_pct = ((analysis.final_score * 100)|int) if analysis.final_score is not none else 0 %}
 
                 {# Overall score badge #}
                 <div style="text-align:center; margin-bottom: 1.2rem;">
