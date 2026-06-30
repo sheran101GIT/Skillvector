@@ -95,7 +95,7 @@ def process_candidate_background(candidate_id, job_id, upload_request_context_ap
             from app.pipeline import generate_embedding as gen_emb
             job_desc_text = preprocess_text(job.description or "")
             job_embedding = gen_emb(job_desc_text)
-            if job_embedding and any(v != 0.0 for v in job_embedding):
+            if job_embedding is not None and len(job_embedding) > 0 and any(v != 0.0 for v in job_embedding):
                 job.embedding = job_embedding
                 db.session.commit()
 

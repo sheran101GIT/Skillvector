@@ -131,8 +131,12 @@ def upload_resumes():
         if file and file.filename:
             # Determine file type and extract text synchronously
             # This ensures we have the content even if we process it later
-            text = "Extraction failed"
             filename = file.filename.lower()
+            if not (filename.endswith('.pdf') or filename.endswith('.docx')):
+                flash(f'Skipped {file.filename}: Unsupported file type (only .pdf and .docx are supported).', 'error')
+                continue
+
+            text = "Extraction failed"
             try:
                 if filename.endswith('.pdf'):
                     from ..pipeline import extract_text_from_pdf
@@ -141,8 +145,9 @@ def upload_resumes():
                     from ..pipeline import extract_text_from_docx
                     text = extract_text_from_docx(file)
             except Exception as e:
-                print(f"Extraction Error: {e}")
-                text = f"Error extracting text: {e}"
+                print(f"Extraction Error for {file.filename}: {e}")
+                # Still create the candidate, but LLM analysis will likely fail or hallucinate
+                text = f"[EXTRACTION_ERROR] {e}"
 
             candidate = Candidate(
                 name=file.filename.rsplit('.', 1)[0].replace('_', ' ').replace('-', ' ').title(),

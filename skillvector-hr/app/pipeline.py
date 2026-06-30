@@ -38,8 +38,13 @@ def extract_text_from_pdf(file_stream):
     reader = PdfReader(file_stream)
     text = ""
     for page in reader.pages:
-        text += page.extract_text() + "\n"
-    return text.strip()
+        page_text = page.extract_text()
+        if page_text:
+            text += page_text + "\n"
+    text = text.strip()
+    if not text:
+        raise ValueError("[ERROR_EMPTY_PDF] Could not extract text. This might be a scanned image or protected PDF.")
+    return text
 
 def extract_text_from_docx(file_stream):
     from docx import Document
@@ -196,7 +201,8 @@ def extract_candidate_details(text):
         except Exception as e:
             msg = f"Groq Extraction Failed: {str(e)}"
             print(msg, flush=True)
-            return {"error": msg}
+            # Do NOT return here — allow fallback to Gemini/OpenAI
+            pass
 
     # 2. Try Google Gemini (Fallback or specific request)
     google_key = os.environ.get("GOOGLE_API_KEY")
@@ -227,7 +233,7 @@ def extract_candidate_details(text):
                 # If it's not a quota error, or we ran out of retries
                 msg = f"Gemini Extraction Failed: {err_str}"
                 print(msg, flush=True)
-                return {"error": msg}
+                pass
 
     # 2. Try OpenAI
     api_key = os.environ.get("OPENAI_API_KEY")
@@ -257,7 +263,7 @@ def extract_candidate_details(text):
         except Exception as e:
              msg = f"OpenAI Extraction Failed: {str(e)}"
              print(msg, flush=True)
-             return {"error": msg}
+             pass
 
     # Fallback
     return {"error": "No valid API keys or Quota Exceeded"}

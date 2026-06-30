@@ -225,7 +225,7 @@ def regenerate_embedding(job_id):
 
     try:
         embedding = generate_embedding(job.description)
-        if not embedding or all(v == 0.0 for v in embedding):
+        if embedding is None or len(embedding) == 0 or all(v == 0.0 for v in embedding):
             flash(f'Could not generate embedding for "{job.title}" — API may be unavailable. Try again later.', 'warning')
             return redirect(url_for('uploads.index'))
 

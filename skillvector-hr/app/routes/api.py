@@ -367,7 +367,9 @@ def google_form_webhook():
     # Security: Verify API Key
     # In production, use os.environ.get('WEBHOOK_SECRET')
     import os
-    expected_key = os.environ.get('WEBHOOK_SECRET', 'skillvector_secret_key_2026')
+    expected_key = os.environ.get('WEBHOOK_SECRET')
+    if not expected_key:
+        return jsonify({'error': 'Server misconfiguration: WEBHOOK_SECRET not set in .env'}), 500
     provided_key = request.headers.get('X-API-Key')
     
     if provided_key != expected_key:
@@ -390,9 +392,9 @@ def google_form_webhook():
         else:
             data['resume_text'] = "No resume text provided."
 
-    # Optional: Logic to find a default job_id if not provided
-    # For now, we accept job_id if sent, else it might be None
     job_id = data.get('job_id')
+    if not job_id:
+        return jsonify({'error': 'Missing field: job_id. Webhook candidates must be assigned to a specific job.'}), 400
     
     # Create Candidate
     candidate = Candidate(
@@ -424,16 +426,7 @@ def google_form_webhook():
     from .. import executor
     from ..services import process_candidate_background
     
-    # We need a job_id for full processing (matching). If none, we might just analyze generic data.
-    if job_id:
-        executor.submit(process_candidate_background, candidate.id, job_id)
-    else:
-        # Try to find a default job or skip matching
-        # For now, let's just log it or pick the first job as fallback
-        job = Job.query.first()
-        if job:
-            candidate.job_id = job.id
-            db.session.commit()
-            executor.submit(process_candidate_background, candidate.id, job.id)
+    # Since job_id is strictly required above, we can directly process
+    executor.submit(process_candidate_background, candidate.id, candidate.job_id)
     
     return jsonify({'message': 'Candidate received', 'id': candidate.id}), 201

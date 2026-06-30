@@ -295,7 +295,7 @@
                         </form>
                     </div>
 
-                    {% if not job.embedding %}
+                    {% if job.embedding is none %}
                     <div style="margin-top:0.5rem;">
                         <form action="{{ url_for('jobs.regenerate_embedding', job_id=job.id) }}" method="POST">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
