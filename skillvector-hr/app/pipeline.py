@@ -383,27 +383,36 @@ def generate_embedding(text):
 
 def compute_final_score(job_embedding, cand_embedding, skills_score, phrasing_score=0.5):
     from sklearn.metrics.pairwise import cosine_similarity
-    
-    # Handle mock embeddings (all zeros) - semantic score should be 0 in this case
-    job_emb = np.array(job_embedding).reshape(1, -1)
-    cand_emb = np.array(cand_embedding).reshape(1, -1)
-    
+
+    # --- Guard: treat None embeddings as zero-vectors so we fall back to skill-only scoring ---
+    ZERO_VEC = [0.0] * 384
+    if job_embedding is None or not isinstance(job_embedding, (list, np.ndarray)):
+        print("WARNING: job_embedding is None or invalid — falling back to zero-vector.", flush=True)
+        job_embedding = ZERO_VEC
+    if cand_embedding is None or not isinstance(cand_embedding, (list, np.ndarray)):
+        print("WARNING: cand_embedding is None or invalid — falling back to zero-vector.", flush=True)
+        cand_embedding = ZERO_VEC
+
+    # Convert to numpy arrays
+    job_emb = np.array(job_embedding, dtype=float).reshape(1, -1)
+    cand_emb = np.array(cand_embedding, dtype=float).reshape(1, -1)
+
     # Check if embeddings are valid (not all zeros)
     job_norm = np.linalg.norm(job_emb)
     cand_norm = np.linalg.norm(cand_emb)
-    
+
     if job_norm < 0.01 or cand_norm < 0.01:
-        # Mock/invalid embeddings - rely more on skills
+        # No usable embedding — rely entirely on skills + phrasing
         semantic_score = 0.0
     else:
         semantic_score = float(cosine_similarity(job_emb, cand_emb)[0][0])
-        # Clamp to reasonable range
+        # Clamp to [0, 1]
         semantic_score = max(0.0, min(1.0, semantic_score))
-    
-    # Adjusted Weighted Formula - Skills matter more
+
+    # Weighted Formula: Skills weighted highest since embedding may be unavailable
     # F = 0.40 * Semantic + 0.50 * Skills + 0.10 * Phrasing
     final_score = (0.40 * semantic_score) + (0.50 * skills_score) + (0.10 * phrasing_score)
-    
+
     return final_score, semantic_score
 
 

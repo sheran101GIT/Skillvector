@@ -38,11 +38,9 @@ def process_candidate_background(candidate_id, job_id, upload_request_context_ap
         # Let's assume we save RAW text now in the route, so we clean here.
         
         clean_text = preprocess_text(candidate.resume_text)
-        
+
         # --- 2. AI Analysis (Heavy) ---
         embedding = generate_embedding(clean_text)
-        extracted_skills = extract_skills(clean_text)
-        experience_years = extract_experience(clean_text)
         extracted_skills = extract_skills(clean_text)
         experience_years = extract_experience(clean_text)
         candidate.experience_years = experience_years
@@ -90,10 +88,21 @@ def process_candidate_background(candidate_id, job_id, upload_request_context_ap
 
         
         # --- 5. Scoring ---
+        # Guard: if job has no embedding stored, generate one now and persist it
+        job_embedding = job.embedding
+        if job_embedding is None:
+            logger.warning(f"Job {job_id} has no embedding — generating on the fly.")
+            from app.pipeline import generate_embedding as gen_emb
+            job_desc_text = preprocess_text(job.description or "")
+            job_embedding = gen_emb(job_desc_text)
+            if job_embedding and any(v != 0.0 for v in job_embedding):
+                job.embedding = job_embedding
+                db.session.commit()
+
         final_score, semantic_score = compute_final_score(
-            job.embedding, 
-            embedding, 
-            skills_score, 
+            job_embedding,
+            embedding,
+            skills_score,
             phrasing_score
         )
         
