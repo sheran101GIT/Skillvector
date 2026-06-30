@@ -168,14 +168,21 @@ def upload_resumes():
 @login_required
 def delete_resume(candidate_id):
     candidate = Candidate.query.get_or_404(candidate_id)
-    
-    # Optional: Check authorization if the candidate is linked to a job
-    # Allow deleting Google Forms entries even if mis-assigned (e.g. via webhook default)
+
+    # Authorization: must own the job, or be a Google Forms entry
     if candidate.job and candidate.job.recruiter_id != current_user.id and candidate.source != 'Google Forms':
         flash("Unauthorized", "error")
         return redirect(url_for('uploads.index'))
-    
+
     name = candidate.name
+
+    # Explicitly delete child rows that have NOT NULL FKs to candidates.
+    # This handles rows that existed before ORM cascade was configured,
+    # and acts as a safety net in case cascade doesn't fire (e.g. bulk ops).
+    from ..models import ReviewEmail, Note
+    ReviewEmail.query.filter_by(candidate_id=candidate_id).delete(synchronize_session=False)
+    Note.query.filter_by(candidate_id=candidate_id).delete(synchronize_session=False)
+
     db.session.delete(candidate)
     db.session.commit()
     flash(f"Deleted resume for {name}", "success")

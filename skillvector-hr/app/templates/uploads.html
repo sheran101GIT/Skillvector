@@ -294,6 +294,19 @@
                             </button>
                         </form>
                     </div>
+
+                    {% if not job.embedding %}
+                    <div style="margin-top:0.5rem;">
+                        <form action="{{ url_for('jobs.regenerate_embedding', job_id=job.id) }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-outline-block"
+                                style="width:100%; color:#7c3aed; border-color:#ddd6fe; background:#f5f3ff;"
+                                title="This job has no vector embedding. Fix this to enable Semantic Similarity scoring.">
+                                <i class="fas fa-magic"></i> Fix Embedding (Enable Semantic Score)
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
                     <div style="margin-top:0.5rem; text-align:center;">
                         <button type="button" onclick="openSaveTemplateModal('{{ job.id }}', '{{ job.title }}')"
                             style="background:none; border:none; color:#6b7280; cursor:pointer; font-size:0.8rem; text-decoration:underline;">

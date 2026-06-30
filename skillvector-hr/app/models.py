@@ -77,6 +77,9 @@ class Candidate(db.Model):
 
     analyses = db.relationship('Analysis', backref='candidate', lazy=True, cascade="all, delete-orphan")
     journey_stages = db.relationship('CandidateJourney', backref='candidate', lazy=True, order_by='CandidateJourney.created_at', cascade="all, delete-orphan")
+    # Cascade deletes so child rows are removed when the candidate is deleted
+    notes = db.relationship('Note', backref='candidate', lazy=True, cascade="all, delete-orphan")
+    review_emails = db.relationship('ReviewEmail', backref='candidate_ref', lazy=True, cascade="all, delete-orphan")
 
     @property
     def analysis(self):
@@ -193,9 +196,8 @@ class ReviewEmail(db.Model):
     status               = db.Column(db.String(32), default='draft')  # draft, copied, sent
     created_at           = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
-    candidate = db.relationship('Candidate', backref=db.backref('review_emails', lazy=True))
-    job       = db.relationship('Job',       backref=db.backref('review_emails', lazy=True))
+    # Relationships — backrefs use 'candidate_ref' to avoid clash with Candidate.review_emails above
+    job = db.relationship('Job', backref=db.backref('review_emails', lazy=True))
 
     def __init__(self, candidate_id=None, job_id=None, generated_by=None,
                  stage_notes_snapshot=None, analysis_snapshot=None,

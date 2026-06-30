@@ -207,3 +207,37 @@ def toggle_status(job_id):
     status = "Active" if job.is_active else "Inactive"
     flash(f'Job status changed to {status}', 'success')
     return redirect(url_for('uploads.index'))
+
+
+@bp.route('/<int:job_id>/regenerate-embedding', methods=['POST'])
+@login_required
+def regenerate_embedding(job_id):
+    """
+    Regenerates the vector embedding for a job description.
+    Needed when a job was created before the embedding pipeline was set up,
+    or when the Gemini/OpenAI API failed silently during job creation.
+    After this, re-analyze each candidate to get a real Semantic Similarity score.
+    """
+    job = Job.query.get_or_404(job_id)
+    if job.recruiter_id != current_user.id:
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('uploads.index'))
+
+    try:
+        embedding = generate_embedding(job.description)
+        if not embedding or all(v == 0.0 for v in embedding):
+            flash(f'Could not generate embedding for "{job.title}" — API may be unavailable. Try again later.', 'warning')
+            return redirect(url_for('uploads.index'))
+
+        job.embedding = embedding
+        db.session.commit()
+        flash(
+            f'Embedding regenerated for "{job.title}". '
+            f'Now click "Refresh Analysis" on each candidate to get real Semantic Similarity scores.',
+            'success'
+        )
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error regenerating embedding: {str(e)}', 'error')
+
+    return redirect(url_for('uploads.index'))
