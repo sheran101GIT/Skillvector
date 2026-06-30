@@ -341,26 +341,40 @@ def generate_embedding(text):
     """
     Generates 384-dim embedding using Google Gemini (new SDK) or OpenAI.
     """
-    # 1. Try Google Gemini (new google-genai SDK)
+    # 1. Try Google Gemini (old stable SDK with retries)
     google_key = os.environ.get("GOOGLE_API_KEY")
     if google_key:
-        try:
-            from google import genai as google_genai
-            client = google_genai.Client(api_key=google_key)
-            result = client.models.embed_content(
-                model="gemini-embedding-004",
-                contents=text[:9000],
-            )
-            embedding = result.embeddings[0].values
-            # Reduce to 384 dims if needed (model returns 3072)
-            if len(embedding) > 384:
-                import numpy as np
-                arr = np.array(embedding[:384])
-                norm = np.linalg.norm(arr)
-                embedding = (arr / norm if norm > 0 else arr).tolist()
-            return embedding
-        except Exception as e:
-            print(f"Gemini Embedding Failed: {e}", flush=True)
+        import time
+        import google.generativeai as genai
+        genai.configure(api_key=google_key)
+        retries = 3
+        base_delay = 2
+        
+        for attempt in range(retries):
+            try:
+                result = genai.embed_content(
+                    model="models/text-embedding-004",
+                    content=text[:9000]
+                )
+                embedding = result['embedding']
+                
+                # Reduce to 384 dims if needed (model returns 768)
+                if len(embedding) > 384:
+                    import numpy as np
+                    arr = np.array(embedding[:384])
+                    norm = np.linalg.norm(arr)
+                    embedding = (arr / norm if norm > 0 else arr).tolist()
+                return embedding
+            except Exception as e:
+                err_str = str(e)
+                if "429" in err_str or "Quota exceeded" in err_str or "403" in err_str:
+                    if attempt < retries - 1:
+                        sleep_time = base_delay * (2 ** attempt)
+                        print(f"Gemini Embedding Rate Limit hit. Retrying in {sleep_time}s...", flush=True)
+                        time.sleep(sleep_time)
+                        continue
+                print(f"Gemini Embedding Failed: {err_str}", flush=True)
+                break
 
     # 2. Try OpenAI
     api_key = os.environ.get("OPENAI_API_KEY")
