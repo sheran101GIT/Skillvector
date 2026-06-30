@@ -109,9 +109,13 @@ def process_candidate_background(candidate_id, job_id, upload_request_context_ap
         # --- 6. Update Candidate & Create Analysis ---
         # --- 6. Update Candidate & Create Analysis ---
         candidate.embedding = embedding
-        
+
         # Merge skills from Regex (extracted_skills) and LLM (details.get('skills'))
-        llm_skills = details.get('skills', []) if isinstance(details.get('skills'), list) else []
+        # Only read LLM skills if extraction succeeded (no 'error' key)
+        llm_skills = []
+        if 'error' not in details and isinstance(details.get('skills'), list):
+            llm_skills = details.get('skills', [])
+
         # Normalize and deduplicate
         all_skills = set()
         for s in extracted_skills:
@@ -119,10 +123,11 @@ def process_candidate_background(candidate_id, job_id, upload_request_context_ap
         for s in llm_skills:
             if isinstance(s, str):
                 all_skills.add(s.lower())
-                
+
         candidate.skills = list(all_skills)
-        # If we want to store the cleaned text back:
-        candidate.resume_text = clean_text 
+        # NOTE: Do NOT overwrite resume_text with clean_text here.
+        # clean_text is lowercased/stripped and would corrupt re-analysis.
+        # The original raw text stays in resume_text.
         
         analysis = Analysis(
             candidate_id=candidate.id,

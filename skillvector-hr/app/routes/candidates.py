@@ -81,7 +81,7 @@ def view(candidate_id):
             candidate.error_message = 'Processing timeout (likely interrupted). Please re-upload.'
             db.session.commit()
         
-    analysis = Analysis.query.filter_by(candidate_id=candidate.id).first()
+    analysis = Analysis.query.filter_by(candidate_id=candidate.id).order_by(Analysis.created_at.desc()).first()
         
     return render_template('candidate_view.html', candidate=candidate, analysis=analysis)
 

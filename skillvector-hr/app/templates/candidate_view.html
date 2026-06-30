@@ -192,37 +192,70 @@
                 </h3>
                 {% if analysis %}
 
+                {# --- Compute real percentages from analysis data --- #}
+                {% set total_skills = (analysis.skills_matched|length) + (analysis.missing_skills|length) %}
+                {% set skills_pct = ((analysis.skills_matched|length / total_skills * 100)|int) if total_skills > 0 else 0 %}
+                {% set semantic_pct = ((analysis.similarity * 100)|int) if analysis.similarity else 0 %}
+                {% set overall_pct = ((analysis.final_score * 100)|int) if analysis.final_score else 0 %}
+
+                {# Overall score badge #}
+                <div style="text-align:center; margin-bottom: 1.2rem;">
+                    <div style="font-size: 2.8rem; font-weight: 700; color: {% if overall_pct >= 70 %}#22c55e{% elif overall_pct >= 40 %}#f59e0b{% else %}#ef4444{% endif %};">
+                        {{ overall_pct }}%
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted, #9ca3af); margin-top: 2px;">Overall Match Score</div>
+                </div>
+
                 <div class="analysis-stat-row">
                     <div class="analysis-stat">
-                        <span class="stat-label">Technical Skills</span>
+                        <span class="stat-label">Skills Match</span>
                         <div class="stat-bar-container">
-                            <div class="stat-bar-fill" style="width: 92%"></div> <!-- Mock da/ta -->
+                            <div class="stat-bar-fill" style="width: {{ skills_pct }}%"></div>
                         </div>
-                        <span class="stat-val">92%</span>
+                        <span class="stat-val">{{ skills_pct }}%</span>
                     </div>
                     <div class="analysis-stat">
-                        <span class="stat-label">Experience</span>
+                        <span class="stat-label">Semantic Similarity</span>
                         <div class="stat-bar-container">
-                            <div class="stat-bar-fill" style="width: 88%"></div>
+                            <div class="stat-bar-fill" style="width: {{ semantic_pct }}%"></div>
                         </div>
-                        <span class="stat-val">88%</span>
+                        <span class="stat-val">{{ semantic_pct }}%</span>
                     </div>
                     <div class="analysis-stat">
-                        <span class="stat-label">Education</span>
+                        <span class="stat-label">Overall Score</span>
                         <div class="stat-bar-container">
-                            <div class="stat-bar-fill" style="width: 95%"></div>
+                            <div class="stat-bar-fill" style="width: {{ overall_pct }}%"></div>
                         </div>
-                        <span class="stat-val">95%</span>
+                        <span class="stat-val">{{ overall_pct }}%</span>
                     </div>
                 </div>
 
+                {# Matched skills section #}
+                {% if analysis.skills_matched %}
                 <div class="assessment-section mt-3">
-                    <h4>Missing Skills</h4>
+                    <h4 style="color: #22c55e;"><i class="fas fa-check-circle"></i> Matched Skills
+                        <small style="font-weight:400; color: var(--text-muted, #9ca3af);">({{ analysis.skills_matched|length }} of {{ total_skills }})</small>
+                    </h4>
+                    <div class="skills-tags-small">
+                        {% for skill in analysis.skills_matched %}
+                        <span class="skill-tag-profile" style="background: rgba(34,197,94,0.12); color: #22c55e; border-color: rgba(34,197,94,0.3);">{{ skill }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Missing skills section #}
+                <div class="assessment-section mt-3">
+                    <h4><i class="fas fa-times-circle" style="color:#ef4444;"></i> Missing Skills
+                        {% if analysis.missing_skills %}
+                        <small style="font-weight:400; color: var(--text-muted, #9ca3af);">({{ analysis.missing_skills|length }})</small>
+                        {% endif %}
+                    </h4>
                     <div class="skills-tags-small">
                         {% for skill in analysis.missing_skills %}
                         <span class="skill-tag-danger">{{ skill }}</span>
                         {% else %}
-                        <span class="no-data-text">None missing</span>
+                        <span class="no-data-text" style="color:#22c55e;">✓ All required skills matched!</span>
                         {% endfor %}
                     </div>
                 </div>
